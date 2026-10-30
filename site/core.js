@@ -4,7 +4,7 @@
   let WIDTH = 1000;
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
-  const WEAPONS = ['triple', 'pulse', 'seeker', 'nova', 'arc'];
+  const WEAPONS = ['triple', 'vortex', 'pulse', 'seeker', 'nova', 'arc'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
     {name:'ASHEN NEBULA',boss:'CINDER MATRIARCH',color:'#efae86'},
@@ -63,7 +63,7 @@
   function createGame(random = Math.random) {
     return {
       random, mode: 'ready', player: {x: WIDTH / 2, y: HEIGHT / 2, r: 12, vx: 0, vy: 0}, cameraY: HEIGHT / 2,
-      enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], events: [],
+      enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], vortices: [], events: [],
       score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
       kills: 0, combo: 0, comboUntil: 0, novaCharge: 0, dashCooldown: 0, dashTime: 0,
       invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0,
@@ -308,19 +308,19 @@
       }
       g.gunAngle=a;g.gunFlash=.12;g.fireIn=.4*g.fireRate;g.events.push({type:'fire',weaponKind:kind,x:g.player.x,y:g.player.y,angle:a,side:g.gunSide});return;
     }
-    const weaponLanes = kind === 'triple' ? [-.2, 0, .2] : kind === 'seeker' ? [-.1, .1] : kind === 'nova' ? [-.12,.12] : [0];
+    const weaponLanes = kind === 'triple' ? [-.2, 0, .2] : kind === 'seeker' || kind === 'vortex' ? [-.1, .1] : kind === 'nova' ? [-.12,.12] : [0];
     const damageStacks = g.upgrades.damage || 0;
     const upgradeLanes = damageStacks === 1 ? [-.16, 0, .16] : damageStacks === 2 ? [-.25, -.08, .08, .25] : damageStacks >= 3 ? [-.28, -.16, 0, .16, .28] : [0];
     const offsets = [...new Set([...weaponLanes, ...upgradeLanes])];
-    const speed = kind === 'pulse' ? 850 : kind === 'seeker' ? 440 : kind === 'nova' ? 510 : 660;
+    const speed = kind === 'pulse' ? 850 : kind === 'seeker' ? 440 : kind === 'nova' ? 510 : kind === 'vortex' ? 370 : 660;
     g.gunAngle = a; g.gunFlash = .09; g.gunSide *= -1;
     const side = g.gunSide,body=0;
     for (const offset of offsets) g.bullets.push({x: g.player.x + Math.cos(body)*side*11 - Math.sin(body)*-8 + Math.cos(a)*9, y: g.player.y + Math.sin(body)*side*11 + Math.cos(body)*-8 + Math.sin(a)*9,
       vx: Math.cos(a + offset) * speed, vy: Math.sin(a + offset) * speed,
-      life: kind === 'seeker' ? 2.2 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? (overdrive ? 12 : 9) : 4,
-      boosted: kind !== 'standard', kind, overdrive, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'nova' ? (overdrive ? 5 : 3) : 1) + g.damageBonus,
-      pierce: kind === 'pulse' ? 2 : 1, homing: kind === 'seeker', trailIn: .02, hitEnemies: new Set()});
-    g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : kind === 'nova' ? .48 : .28) * g.fireRate;
+      life: kind === 'seeker' ? 2.2 : kind === 'vortex' ? 2.8 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? (overdrive ? 12 : 9) : kind === 'vortex' ? 8 : 4,
+      boosted: kind !== 'standard', kind, overdrive, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'vortex' ? 3 : kind === 'nova' ? (overdrive ? 5 : 3) : 1) + g.damageBonus,
+      pierce: kind === 'pulse' ? 2 : 1, homing: kind === 'seeker' || kind === 'vortex', turnRate:kind==='vortex'?2.4:undefined, trailIn: .02, hitEnemies: new Set()});
+    g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : kind === 'nova' ? .48 : kind === 'vortex' ? .82 : .28) * g.fireRate;
     if(overdrive){g.novaCharge=0;g.combo=0;}
     g.events.push({type: 'fire', weaponKind: kind, overdrive, x:g.player.x, y:g.player.y, angle:a, side});
     if(overdrive)g.events.push({type:'novaOverdrive',x:g.player.x,y:g.player.y});
@@ -346,6 +346,32 @@
       target.hp-=damage;target.hitFlash=.12;g.events.push({type:'impact',x:target.x,y:target.y,damage});if(target.hp<=0)defeat(g,target);
     }
     g.events.push({type:'explosion',x,y,source,kind:b.kind,radius,overdrive:!!b.overdrive});
+  }
+  function openVortex(g,b) {
+    b.life=0;
+    if(g.vortices.length>=3)return;
+    const maxLife=2.25;
+    g.vortices.push({x:b.x,y:b.y,radius:142,life:maxLife,maxLife,pulseIn:0,damage:Math.max(2,b.damage||2),phase:g.random()*Math.PI*2});
+    g.events.push({type:'vortexOpen',x:b.x,y:b.y,radius:142});
+  }
+  function updateVortices(g,dt) {
+    for(let i=g.vortices.length-1;i>=0;i--){
+      const v=g.vortices[i];v.life-=dt;v.pulseIn-=dt;
+      for(const e of g.enemies){
+        if(e.hp<=0)continue;
+        const dx=v.x-e.x,dy=v.y-e.y,d=Math.hypot(dx,dy);
+        if(d>=v.radius||d<1)continue;
+        const pull=(1-d/v.radius)*150*dt;
+        e.x+=dx/d*pull;e.y+=dy/d*pull;
+        if(v.pulseIn<=0){e.hp-=v.damage;e.hitFlash=.12;g.events.push({type:'vortexPulse',x:e.x,y:e.y,damage:v.damage});if(e.hp<=0)defeat(g,e);}
+      }
+      if(v.pulseIn<=0)v.pulseIn=.18;
+      if(v.life<=0){
+        const radius=v.radius*.76;
+        for(const e of g.enemies){if(e.hp<=0)continue;const d=Math.hypot(v.x-e.x,v.y-e.y);if(d>radius)continue;const damage=Math.ceil(v.damage*2*(1-d/radius));e.hp-=damage;e.hitFlash=.16;if(e.hp<=0)defeat(g,e);}
+        g.events.push({type:'vortexCollapse',x:v.x,y:v.y,radius});g.vortices.splice(i,1);
+      }
+    }
   }
   function guide(b,target,dt) {
     const angle=Math.atan2(target.y-b.y,target.x-b.x),old=Math.atan2(b.vy,b.vx);
@@ -494,6 +520,7 @@
       for (const b of g.bullets) {
         if (b.life <= 0 || e.hp <= 0 || b.hitEnemies?.has(e) || distance(b, e) >= e.r + b.r) continue;
         (b.hitEnemies ||= new Set()).add(e);
+        if(b.kind==='vortex'){openVortex(g,b);continue;}
         if((b.kind==='seeker'&&b.homing)||b.kind==='nova'){detonate(g,b,b.x,b.y,'player');continue;}
         e.hp -= b.damage || 1; e.hitFlash = .1; g.events.push({type:'impact',x:b.x,y:b.y,damage:b.damage||1}); b.pierce = (b.pierce || 1) - 1;
         if (b.pierce <= 0) b.life = 0;
@@ -506,6 +533,7 @@
       if (e.hp > 0 && !(e.kind === 'boss' && e.age < 1.5) && !dashing && g.invulnerable <= 0 && distance(e, g.player) < e.r + g.player.r) hit(g);
       if (g.mode === 'over') break;
     }
+    updateVortices(g,dt);
     if (g.mode === 'playing') for (const b of g.enemyBullets) {
       if(b.kind==='missile'||b.kind==='rocket'){
         const lure=activeDecoy(g)||g.player;guide(b,lure,dt);b.trailIn=(b.trailIn??0)-dt;

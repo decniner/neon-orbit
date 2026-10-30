@@ -65,6 +65,7 @@
       const t = this.context.currentTime;
       if (type === 'fire') {
         if(weapon==='arc'){this.hiss(.14,.03,900,t);this.tone(390,.18,'sawtooth',.042,t,115);this.tone(1180,.09,'triangle',.022,t+.015,430);return;}
+        if(weapon==='vortex'){this.tone(145,.23,'sawtooth',.033,t,54);this.tone(720,.13,'sine',.022,t+.018,190);this.hiss(.16,.018,1150,t);return;}
         const f=weapon==='pulse'?250:weapon==='seeker'?310:weapon==='nova'?410:620;
         this.tone(f,.09,'sawtooth',weapon==='pulse'?.03:.026,t,f*.42);
         this.tone(f*2.03,.035,'triangle',.014,t);
@@ -73,6 +74,10 @@
         else if(weapon==='nova'){this.tone(1240,.16,'sine',.026,t,260);this.tone(1860,.12,'triangle',.013,t+.018,620);this.hiss(.12,.018,2100,t);}
       } else if (type === 'kill') {
         this.hiss(.13, .045, 350, t); this.tone(110, .15, 'sine', .09, t, 35);
+      } else if (type === 'vortexOpen') {
+        this.tone(82,.34,'sine',.095,t,34);this.tone(310,.28,'triangle',.032,t,58);this.hiss(.3,.045,720,t);
+      } else if (type === 'vortexCollapse') {
+        this.hiss(.3,.085,220,t);this.tone(68,.45,'sine',.13,t,24);this.tone(880,.12,'triangle',.035,t+.03,180);
       } else if (type === 'hit') {
         this.hiss(.2, .065, 150, t); this.tone(140, .26, 'sawtooth', .04, t, 35);
       } else if (type === 'enemyGun') {
