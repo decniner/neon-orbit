@@ -53,7 +53,7 @@
     return {
       random, mode: 'ready', player: {x: WIDTH / 2, y: HEIGHT / 2, r: 12, vx: 0, vy: 0}, cameraY: HEIGHT / 2,
       enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], events: [],
-      score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0,
+      score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
       kills: 0, combo: 0, comboUntil: 0, dashCooldown: 0, dashTime: 0,
       invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0,
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
@@ -132,6 +132,7 @@
       speed: (heavy ? 45 : kind === 'interceptor' ? 125 : 65) + Math.min(g.wave, 25) * 3});
   }
   function spawnBoss(g) {
+    g.bossCountdown = 0;
     const hp = 38 + g.stage * 4;
     g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', stage:g.stage, destination:g.destination, speed: 35, fireIn: 2.8, age: 0});
     g.bossSpawnedStage = g.stage;
@@ -254,7 +255,7 @@
       g.enemyBullets.length = 0;
       g.pickups.push({x: e.x - 25, y: e.y, r: 14, life: 30, repair: true},
         {x: e.x + 25, y: e.y, r: 14, life: 30, weapon: true, weaponKind: WEAPONS[(g.stage - 1) % 3]});
-      g.stage++; g.wave = g.stage; g.stageTime = 0; g.bossSpawnedStage = 0; g.destination = destinationFor(g.stage); g.spawnIn = 1.25;
+      g.stage++; g.wave = g.stage; g.stageTime = 0; g.bossSpawnedStage = 0; g.bossCountdown = 0; g.destination = destinationFor(g.stage); g.spawnIn = 1.25;
       g.events.push({type: 'bossDefeated', bonus, x: e.x, y: e.y, stage:g.stage});
       g.events.push({type:'stageComplete',stage:g.stage,destination:g.destination});
     } else if (g.kills % 8 === 0) g.pickups.push({x: e.x + 12, y: e.y, r: 14, life: 22, repair: true});
@@ -272,6 +273,13 @@
     g.decoys=g.decoys.filter(d=>d.life>0&&d.hp>0);
     const bossActive = g.enemies.some(e => e.kind === 'boss' && e.hp > 0);
     if (!bossActive) g.stageTime += dt;
+    if (!bossActive && g.stageTime < g.stageDuration) {
+      const seconds = Math.ceil(g.stageDuration - g.stageTime);
+      if (seconds <= 5 && seconds > 0 && seconds !== g.bossCountdown) {
+        g.bossCountdown = seconds;
+        g.events.push({type:'bossCountdown',seconds,stage:g.stage,destination:g.destination});
+      }
+    }
     if (!bossActive && g.stageTime >= g.stageDuration && g.bossSpawnedStage !== g.stage) spawnBoss(g);
     g.weaponTime = Math.max(0, g.weaponTime - dt);g.gunFlash=Math.max(0,g.gunFlash-dt);
     g.supplyIn -= dt; if (g.supplyIn <= 0) supply(g);
