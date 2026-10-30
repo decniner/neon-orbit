@@ -10,6 +10,11 @@
     {name:'ASHEN NEBULA',boss:'CINDER MATRIARCH',color:'#efae86'},
     {name:'VOID CITADEL',boss:'NIGHT SENTINEL',color:'#c6a4ff'}
   ];
+  const BOSS_ATTACKS = [
+    {name:'AEGIS WARDEN',telegraph:'LANCE RING INCOMING'},
+    {name:'CINDER MATRIARCH',telegraph:'FLAME FAN INCOMING'},
+    {name:'NIGHT SENTINEL',telegraph:'SEEKER PAIR INCOMING'}
+  ];
   const UPGRADES = {
     damage: {name:'Hot core',icon:'✧',tag:'OFFENSE',description:'+1 damage to every projectile.',cap:3},
     haste: {name:'Quick trigger',icon:'»',tag:'FIREPOWER',description:'Fire 15% faster. Every weapon.',cap:3},
@@ -238,8 +243,24 @@
       e.fireIn = (e.fireIn ?? 2.6) - dt;
       if (e.fireIn <= 0) {
         if (e.kind === 'boss') {
-          for (let i = 0; i < 12; i++) hostileShot(g, e, i * Math.PI / 6 + e.age * .25, 170);
-          e.fireIn = e.hp < e.maxHp / 2 ? 1.7 : 2.5;
+          const phaseTwo = e.hp < e.maxHp / 2;
+          const attack = (Math.max(1, Math.floor(e.stage || g.stage)) - 1) % BOSS_ATTACKS.length;
+          if (attack === 0) {
+            const count = phaseTwo ? 20 : 14;
+            for (let i = 0; i < count; i++) hostileShot(g, e, i * Math.PI * 2 / count + e.age * (phaseTwo ? .42 : .25), phaseTwo ? 205 : 175);
+          } else if (attack === 1) {
+            const count = phaseTwo ? 11 : 7;
+            const spread = phaseTwo ? .72 : .48;
+            for (let i = 0; i < count; i++) hostileShot(g, e, fireAngle - spread / 2 + spread * i / (count - 1), phaseTwo ? 235 : 195);
+          } else {
+            hostileMissile(g, e, fireAngle - .12, 'missile');
+            hostileMissile(g, e, fireAngle + .12, 'missile');
+            if (phaseTwo) {
+              hostileMissile(g, e, fireAngle, 'missile');
+              for (let i = 0; i < 8; i++) hostileShot(g, e, i * Math.PI / 4 + e.age * .3, 185);
+            }
+          }
+          e.fireIn = phaseTwo ? 1.7 : 2.5;
         } else if(e.kind==='interceptor') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=2.8;}
         else if(e.kind==='sentry') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=3.1;}
         else if(e.kind==='heavy') {hostileMissile(g,e,fireAngle,'rocket');e.fireIn=2.35;}
@@ -394,6 +415,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, destinationFor, configureViewport, chooseUpgrade, createGame, start, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, destinationFor, configureViewport, chooseUpgrade, createGame, start, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
