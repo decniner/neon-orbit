@@ -20,6 +20,24 @@
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  function incomingMissileThreat(g, range = 240, warningTime = 1.25) {
+    let threat = null;
+    for (const missile of g.enemyBullets) {
+      if ((missile.kind !== 'missile' && missile.kind !== 'rocket') || missile.life <= 0) continue;
+      const dx = missile.x - g.player.x, dy = missile.y - g.player.y;
+      const d = Math.hypot(dx, dy);
+      if (d > range || d === 0) continue;
+      const relativeVx = missile.vx - g.player.vx, relativeVy = missile.vy - g.player.vy;
+      const closingSpeed = -(dx * relativeVx + dy * relativeVy) / d;
+      if (closingSpeed < 60) continue;
+      const timeToImpact = Math.max(0, (d - g.player.r - missile.r - 10) / closingSpeed);
+      if (timeToImpact > warningTime || (threat && timeToImpact >= threat.timeToImpact)) continue;
+      const angle = (Math.atan2(dy, dx) + Math.PI * 2) % (Math.PI * 2);
+      const directions = ['→','↘','↓','↙','←','↖','↑','↗'];
+      threat = {direction:directions[Math.round(angle / (Math.PI / 4)) % directions.length], distance:d, timeToImpact, kind:missile.kind};
+    }
+    return threat;
+  }
 
   function configureViewport(width, height, mobile = false) {
     if (!mobile || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
@@ -368,6 +386,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, destinationFor, configureViewport, chooseUpgrade, createGame, start, togglePause, step, advance, dash};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, destinationFor, configureViewport, chooseUpgrade, createGame, start, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
