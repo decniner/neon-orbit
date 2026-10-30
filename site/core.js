@@ -65,7 +65,7 @@
       random, mode: 'ready', player: {x: WIDTH / 2, y: HEIGHT / 2, r: 12, vx: 0, vy: 0}, cameraY: HEIGHT / 2,
       enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], events: [],
       score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
-      kills: 0, combo: 0, comboUntil: 0, dashCooldown: 0, dashTime: 0,
+      kills: 0, combo: 0, comboUntil: 0, novaCharge: 0, dashCooldown: 0, dashTime: 0,
       invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0,
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
       heading: -Math.PI / 2, roll: 0, rollTime: 0, rollDirection: 1, rollHeld: false,
@@ -193,7 +193,8 @@
       g.events.push({type:'playerMissileSalvo',x:g.player.x,y:g.player.y});
     }
     const a = -Math.PI / 2;
-    const kind = g.weaponTime > 0 ? g.weaponKind : 'standard';
+    const overdrive = g.novaCharge >= 1;
+    const kind = overdrive ? 'nova' : g.weaponTime > 0 ? g.weaponKind : 'standard';
     const weaponLanes = kind === 'triple' ? [-.2, 0, .2] : kind === 'seeker' ? [-.1, .1] : kind === 'nova' ? [-.12,.12] : [0];
     const damageStacks = g.upgrades.damage || 0;
     const upgradeLanes = damageStacks === 1 ? [-.16, 0, .16] : damageStacks === 2 ? [-.25, -.08, .08, .25] : damageStacks >= 3 ? [-.28, -.16, 0, .16, .28] : [0];
@@ -203,11 +204,13 @@
     const side = g.gunSide,body=0;
     for (const offset of offsets) g.bullets.push({x: g.player.x + Math.cos(body)*side*11 - Math.sin(body)*-8 + Math.cos(a)*9, y: g.player.y + Math.sin(body)*side*11 + Math.cos(body)*-8 + Math.sin(a)*9,
       vx: Math.cos(a + offset) * speed, vy: Math.sin(a + offset) * speed,
-      life: kind === 'seeker' ? 2.2 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? 9 : 4,
-      boosted: kind !== 'standard', kind, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'nova' ? 3 : 1) + g.damageBonus,
+      life: kind === 'seeker' ? 2.2 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? (overdrive ? 12 : 9) : 4,
+      boosted: kind !== 'standard', kind, overdrive, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'nova' ? (overdrive ? 5 : 3) : 1) + g.damageBonus,
       pierce: kind === 'pulse' ? 2 : 1, homing: kind === 'seeker', trailIn: .02, hitEnemies: new Set()});
     g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : kind === 'nova' ? .48 : .28) * g.fireRate;
-    g.events.push({type: 'fire', weaponKind: kind, x:g.player.x, y:g.player.y, angle:a, side});
+    if(overdrive){g.novaCharge=0;g.combo=0;}
+    g.events.push({type: 'fire', weaponKind: kind, overdrive, x:g.player.x, y:g.player.y, angle:a, side});
+    if(overdrive)g.events.push({type:'novaOverdrive',x:g.player.x,y:g.player.y});
   }
   function hostileShot(g, e, angle, speed = 300) {
     if (g.enemyBullets.length >= 300) return;
@@ -224,12 +227,12 @@
   function detonate(g,b,x,y,source) {
     if (b.exploded) return;
     b.exploded=true;b.life=0;
-    const radius=source==='player'?(b.kind==='nova'?88:54):b.kind==='rocket'?72:48;
+    const radius=source==='player'?(b.kind==='nova'?(b.overdrive?132:88):54):b.kind==='rocket'?72:48;
     for(const target of g.enemies){if(target.hp<=0)continue;const d=Math.hypot(target.x-x,target.y-y);if(d>radius)continue;
       const damage=Math.max(1,Math.ceil((b.damage||1)*(1-d/radius)));
       target.hp-=damage;target.hitFlash=.12;g.events.push({type:'impact',x:target.x,y:target.y,damage});if(target.hp<=0)defeat(g,target);
     }
-    g.events.push({type:'explosion',x,y,source,kind:b.kind,radius});
+    g.events.push({type:'explosion',x,y,source,kind:b.kind,radius,overdrive:!!b.overdrive});
   }
   function guide(b,target,dt) {
     const angle=Math.atan2(target.y-b.y,target.x-b.x),old=Math.atan2(b.vy,b.vx);
@@ -327,7 +330,7 @@
     g.weaponTime = Math.max(0, g.weaponTime - dt);g.gunFlash=Math.max(0,g.gunFlash-dt);
     g.supplyIn -= dt; if (g.supplyIn <= 0) supply(g);
     g.dashCooldown = Math.max(0, g.dashCooldown - dt); g.invulnerable = Math.max(0, g.invulnerable - dt);
-    if (g.time > g.comboUntil) g.combo = 0;
+    if (g.time > g.comboUntil) { g.combo = 0; g.novaCharge = 0; }
     let x = input.x || 0, y = input.y || 0, n = Math.hypot(x, y);
     if (n > 1) { x /= n; y /= n; }
     g.heading = -Math.PI / 2;
@@ -416,7 +419,7 @@
         p.life = 0; const beforeHp = g.hp;
         if (p.repair) g.hp = Math.min(g.maxHp, g.hp + 1);
         else if (p.weapon) { g.weaponTime = 12; g.weaponKind = WEAPONS.includes(p.weaponKind) ? p.weaponKind : 'triple'; g.fireIn = 0; }
-        else { g.combo = Math.min(8, g.combo + 1); g.comboUntil = g.time + 3; g.score += 100 * g.combo; g.xp++; g.peakCombo = Math.max(g.peakCombo,g.combo); }
+        else { const wasReady=g.novaCharge>=1; g.combo = Math.min(8, g.combo + 1); g.comboUntil = g.time + 3; g.score += 100 * g.combo; g.xp++; g.peakCombo = Math.max(g.peakCombo,g.combo); g.novaCharge=Math.min(1,g.novaCharge+.25); if(!wasReady&&g.novaCharge>=1)g.events.push({type:'novaReady',x:g.player.x,y:g.player.y}); }
         g.events.push({type: 'pickup', x: p.x, y: p.y, repair: p.repair, weapon: p.weapon, weaponKind: g.weaponKind, repaired:g.hp-beforeHp, points:p.repair||p.weapon?0:100*g.combo});
       }
     }

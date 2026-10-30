@@ -37,3 +37,6 @@
 
 .mobile-edition-link{font-size:11px;color:var(--mint);letter-spacing:.3px}.mobile-edition-link span{margin-left:5px}
 @media(max-width:760px){.header-right .mobile-edition-link{font-size:0;white-space:nowrap}.header-right .mobile-edition-link:after{content:"PHONE";font:8px monospace;letter-spacing:.8px;color:var(--mint)}}
+.combo.overdrive-ready{color:#f0b7ff;text-shadow:0 0 12px #de79ff99;animation:overdrive-pulse 1.15s ease-in-out infinite alternate}
+@keyframes overdrive-pulse{from{opacity:.72}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.combo.overdrive-ready{animation:none}}
