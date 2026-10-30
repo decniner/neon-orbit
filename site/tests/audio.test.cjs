@@ -50,6 +50,9 @@ assert.equal(context.sources.length, sourceCount + 2, 'incoming missiles receive
 const fireSourceCount=context.sources.length;
 sound.effect('fire','seeker');
 assert.ok(context.sources.length>=fireSourceCount+3,'seeker fire gets layered propulsion, launch, and exhaust cues');
+const novaCount=context.sources.length;
+sound.effect('fire','nova');
+assert.ok(context.sources.length>=novaCount+5,'Nova Lancers get a distinct charged launch cue');
 sound.effect('explosion');
 const noiseCount=sound.noiseBuffers.size;
 sound.effect('explosion');

@@ -4,7 +4,7 @@
   let WIDTH = 1000;
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
-  const WEAPONS = ['triple', 'pulse', 'seeker'];
+  const WEAPONS = ['triple', 'pulse', 'seeker', 'nova'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
     {name:'ASHEN NEBULA',boss:'CINDER MATRIARCH',color:'#efae86'},
@@ -194,19 +194,19 @@
     }
     const a = -Math.PI / 2;
     const kind = g.weaponTime > 0 ? g.weaponKind : 'standard';
-    const weaponLanes = kind === 'triple' ? [-.2, 0, .2] : kind === 'seeker' ? [-.1, .1] : [0];
+    const weaponLanes = kind === 'triple' ? [-.2, 0, .2] : kind === 'seeker' ? [-.1, .1] : kind === 'nova' ? [-.12,.12] : [0];
     const damageStacks = g.upgrades.damage || 0;
     const upgradeLanes = damageStacks === 1 ? [-.16, 0, .16] : damageStacks === 2 ? [-.25, -.08, .08, .25] : damageStacks >= 3 ? [-.28, -.16, 0, .16, .28] : [0];
     const offsets = [...new Set([...weaponLanes, ...upgradeLanes])];
-    const speed = kind === 'pulse' ? 850 : kind === 'seeker' ? 440 : 660;
+    const speed = kind === 'pulse' ? 850 : kind === 'seeker' ? 440 : kind === 'nova' ? 510 : 660;
     g.gunAngle = a; g.gunFlash = .09; g.gunSide *= -1;
     const side = g.gunSide,body=0;
     for (const offset of offsets) g.bullets.push({x: g.player.x + Math.cos(body)*side*11 - Math.sin(body)*-8 + Math.cos(a)*9, y: g.player.y + Math.sin(body)*side*11 + Math.cos(body)*-8 + Math.sin(a)*9,
       vx: Math.cos(a + offset) * speed, vy: Math.sin(a + offset) * speed,
-      life: kind === 'seeker' ? 2.2 : 1.6, r: kind === 'pulse' ? 7 : 4,
-      boosted: kind !== 'standard', kind, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : 1) + g.damageBonus,
+      life: kind === 'seeker' ? 2.2 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? 9 : 4,
+      boosted: kind !== 'standard', kind, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'nova' ? 3 : 1) + g.damageBonus,
       pierce: kind === 'pulse' ? 2 : 1, homing: kind === 'seeker', trailIn: .02, hitEnemies: new Set()});
-    g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : .28) * g.fireRate;
+    g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : kind === 'nova' ? .48 : .28) * g.fireRate;
     g.events.push({type: 'fire', weaponKind: kind, x:g.player.x, y:g.player.y, angle:a, side});
   }
   function hostileShot(g, e, angle, speed = 300) {
@@ -224,7 +224,7 @@
   function detonate(g,b,x,y,source) {
     if (b.exploded) return;
     b.exploded=true;b.life=0;
-    const radius=source==='player'?54:b.kind==='rocket'?72:48;
+    const radius=source==='player'?(b.kind==='nova'?88:54):b.kind==='rocket'?72:48;
     for(const target of g.enemies){if(target.hp<=0)continue;const d=Math.hypot(target.x-x,target.y-y);if(d>radius)continue;
       const damage=Math.max(1,Math.ceil((b.damage||1)*(1-d/radius)));
       target.hp-=damage;target.hitFlash=.12;g.events.push({type:'impact',x:target.x,y:target.y,damage});if(target.hp<=0)defeat(g,target);
@@ -294,7 +294,7 @@
       if(coreId==='cinder')g.damageBonus++;
       g.enemyBullets.length = 0;
       g.pickups.push({x: e.x - 25, y: e.y, r: 14, life: 30, repair: true},
-        {x: e.x + 25, y: e.y, r: 14, life: 30, weapon: true, weaponKind: WEAPONS[(defeatedStage - 1) % 3]});
+        {x: e.x + 25, y: e.y, r: 14, life: 30, weapon: true, weaponKind: WEAPONS[(defeatedStage - 1) % WEAPONS.length]});
       g.stage++; g.wave = g.stage; g.stageTime = 0; g.bossSpawnedStage = 0; g.bossCountdown = 0; g.destination = destinationFor(g.stage); g.spawnIn = 1.25;
       g.events.push({type: 'bossDefeated', bonus, x: e.x, y: e.y, stage:defeatedStage});
       g.events.push({type:'stageComplete',stage:g.stage,destination:g.destination});
@@ -375,7 +375,7 @@
       for (const b of g.bullets) {
         if (b.life <= 0 || e.hp <= 0 || b.hitEnemies?.has(e) || distance(b, e) >= e.r + b.r) continue;
         (b.hitEnemies ||= new Set()).add(e);
-        if(b.kind==='seeker'&&b.homing){detonate(g,b,b.x,b.y,'player');continue;}
+        if((b.kind==='seeker'&&b.homing)||b.kind==='nova'){detonate(g,b,b.x,b.y,'player');continue;}
         e.hp -= b.damage || 1; e.hitFlash = .1; g.events.push({type:'impact',x:b.x,y:b.y,damage:b.damage||1}); b.pierce = (b.pierce || 1) - 1;
         if (b.pierce <= 0) b.life = 0;
         if (e.hp <= 0) defeat(g, e);

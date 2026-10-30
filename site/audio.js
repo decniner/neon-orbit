@@ -64,11 +64,12 @@
       if (!this.enabled || !this.ready) return;
       const t = this.context.currentTime;
       if (type === 'fire') {
-        const f=weapon==='pulse'?250:weapon==='seeker'?310:620;
+        const f=weapon==='pulse'?250:weapon==='seeker'?310:weapon==='nova'?410:620;
         this.tone(f,.09,'sawtooth',weapon==='pulse'?.03:.026,t,f*.42);
         this.tone(f*2.03,.035,'triangle',.014,t);
         if (weapon === 'pulse') this.hiss(.07, .02, 850, t);
         else if(weapon==='seeker'){this.hiss(.1,.018,1300,t);this.tone(900,.11,'sine',.016,t,410);}
+        else if(weapon==='nova'){this.tone(1240,.16,'sine',.026,t,260);this.tone(1860,.12,'triangle',.013,t+.018,620);this.hiss(.12,.018,2100,t);}
       } else if (type === 'kill') {
         this.hiss(.13, .045, 350, t); this.tone(110, .15, 'sine', .09, t, 35);
       } else if (type === 'hit') {
