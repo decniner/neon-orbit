@@ -1,0 +1,15 @@
+{
+  "name": "NEON ORBIT — Mobile Flight",
+  "short_name": "NEON ORBIT",
+  "description": "A touch-first, full-screen arcade flight through the Neon Orbit universe.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#050b12",
+  "theme_color": "#090e15",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
