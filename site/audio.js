@@ -15,8 +15,9 @@
       this.compressor.threshold.value = -19; this.compressor.knee.value = 15;
       this.compressor.ratio.value = 3.2; this.compressor.attack.value = .008; this.compressor.release.value = .18;
       this.musicBus = c.createGain(); this.musicBus.gain.value = .48;
+      this.ambienceBus = c.createGain(); this.ambienceBus.gain.value = 0;
       this.effectsBus = c.createGain(); this.effectsBus.gain.value = .88;
-      this.musicBus.connect(this.master); this.effectsBus.connect(this.master);
+      this.musicBus.connect(this.master); this.ambienceBus.connect(this.master); this.effectsBus.connect(this.master);
       this.master.connect(this.compressor); this.compressor.connect(c.destination);
       this.echo = c.createDelay(.5); this.echo.delayTime.value = .24;
       const feedback = c.createGain(), wet = c.createGain(); feedback.gain.value = .2; wet.gain.value = .13;
@@ -110,7 +111,7 @@
       const hz = n => 440 * Math.pow(2, (n - 69) / 12);
       while (this.nextBeat < now + .16) {
         const t = this.nextBeat, beat = this.beat++, step = beat % 16, rootNote = [45, 41, 48, 43][Math.floor(beat / 16) % 4];
-        if (step % 8 === 0) this.tone(hz(rootNote - 12), .34, 'sine', boss ? .085 : .07, t, hz(rootNote - 22), false, 'musicBus');
+        if (step % 8 === 0) this.tone(hz(rootNote + 0), .28, 'triangle', boss ? .028 : .022, t, hz(rootNote - 5), false, 'musicBus');
         if (step % 4 === 0) {
           this.tone(hz(rootNote + 12), .48, 'triangle', boss ? .025 : .022, t, undefined, true, 'musicBus');
           this.tone(hz(rootNote + 19), .42, 'sine', .012, t + .012, undefined, true, 'musicBus');

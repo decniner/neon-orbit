@@ -35,6 +35,7 @@ const sound = new SoundEngine({context});
 assert.ok(sound.compressor, 'sound output is protected by a dynamics compressor');
 assert.ok(sound.musicBus.connections.includes(sound.master), 'music has an independent mix bus');
 assert.ok(sound.effectsBus.connections.includes(sound.master), 'effects have an independent mix bus');
+assert.equal(sound.ambienceBus.gain.value, 0, 'there is no always-on engine or ambience layer');
 sound.update('playing', false);
 assert.equal(sound.musicCue, 'flight', 'normal flight music selects its own cue');
 context.currentTime = .5;
@@ -54,3 +55,4 @@ assert.equal(sound.noiseBuffers.size,noiseCount,'combat noise is reused instead 
 assert.ok(context.sources.length>=fireSourceCount+9,'explosions layer low-end impact and bright debris');
 sound.update('paused');
 assert.equal(sound.musicCue, '', 'leaving play resets the cue cleanly');
+assert.equal(sound.ambienceBus.gain.value, 0, 'pausing does not leave a background hum');
