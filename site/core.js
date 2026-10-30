@@ -58,7 +58,7 @@
     return {
       random, mode: 'ready', player: {x: WIDTH / 2, y: HEIGHT / 2, r: 12, vx: 0, vy: 0}, cameraY: HEIGHT / 2,
       enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], events: [],
-      score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
+      score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
       kills: 0, combo: 0, comboUntil: 0, dashCooldown: 0, dashTime: 0,
       invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0,
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
@@ -168,9 +168,11 @@
     if (!target) return;
     if (g.missileIn <= 0) {
       const angle = Math.atan2(target.y - g.player.y, target.x - g.player.x);
-      for (const side of [-1, 1]) {
-        const a = angle + side * .035;
-        g.playerMissiles.push({x:g.player.x + side * 18, y:g.player.y + 4,
+      const salvo = 2 + Math.min(2,g.guardianCores?.sentinel||0);
+      for (let i=0;i<salvo;i++) {
+        const offset=i-(salvo-1)/2,spacing=36/(salvo-1);
+        const a = angle + offset * .035;
+        g.playerMissiles.push({x:g.player.x + offset * spacing, y:g.player.y + 4,
           vx:Math.cos(a)*430, vy:Math.sin(a)*430, r:5, life:3.2,
           kind:'missile', homing:true, turnRate:4.6, damage:2+g.damageBonus, trailIn:0});
       }
@@ -272,16 +274,22 @@
     g.kills++; g.pickups.push({x: e.x, y: e.y, r: 6, life: 14});
     g.events.push({type: 'kill', x: e.x, y: e.y});
     if (e.kind === 'boss') {
-      const bonus = 1000 + g.stage * 100; g.score += bonus; g.bossesDefeated++; g.xp += 4;
+      const defeatedStage=e.stage||g.stage,bonus = 1000 + defeatedStage * 100; g.score += bonus; g.bossesDefeated++; g.xp += 4;
+      const coreId=['aegis','cinder','sentinel'][(defeatedStage-1)%3];
+      g.guardianCores[coreId]++;
+      if(coreId==='aegis')g.aegisShield=true;
+      if(coreId==='cinder')g.damageBonus++;
       g.enemyBullets.length = 0;
       g.pickups.push({x: e.x - 25, y: e.y, r: 14, life: 30, repair: true},
-        {x: e.x + 25, y: e.y, r: 14, life: 30, weapon: true, weaponKind: WEAPONS[(g.stage - 1) % 3]});
+        {x: e.x + 25, y: e.y, r: 14, life: 30, weapon: true, weaponKind: WEAPONS[(defeatedStage - 1) % 3]});
       g.stage++; g.wave = g.stage; g.stageTime = 0; g.bossSpawnedStage = 0; g.bossCountdown = 0; g.destination = destinationFor(g.stage); g.spawnIn = 1.25;
-      g.events.push({type: 'bossDefeated', bonus, x: e.x, y: e.y, stage:g.stage});
+      g.events.push({type: 'bossDefeated', bonus, x: e.x, y: e.y, stage:defeatedStage});
       g.events.push({type:'stageComplete',stage:g.stage,destination:g.destination});
+      g.events.push({type:'coreAcquired',id:coreId,level:g.guardianCores[coreId],x:e.x,y:e.y});
     } else if (g.kills % 8 === 0) g.pickups.push({x: e.x + 12, y: e.y, r: 14, life: 22, repair: true});
   }
   function hit(g) {
+    if(g.aegisShield){g.aegisShield=false;g.aegisRecharge=Math.max(9,24-(g.guardianCores.aegis-1)*3);g.invulnerable=1.5;g.events.push({type:'shieldHit',x:g.player.x,y:g.player.y,recharge:g.aegisRecharge});return;}
     g.hp--; g.damageTaken++; g.invulnerable = 1.5;
     g.events.push({type: 'hit', x: g.player.x, y: g.player.y});
     if (g.hp <= 0) { g.mode = 'over'; g.events.push({type: 'over'}); }
@@ -290,6 +298,7 @@
     if (g.mode !== 'playing') return;
     const dt = clamp(Number.isFinite(delta) ? delta : 0, 0, .05);
     g.events = []; g.time += dt;
+    if(g.aegisRecharge>0){g.aegisRecharge=Math.max(0,g.aegisRecharge-dt);if(g.aegisRecharge===0&&g.guardianCores.aegis){g.aegisShield=true;g.events.push({type:'shieldReady',x:g.player.x,y:g.player.y});}}
     for(const d of g.decoys)d.life-=dt;
     g.decoys=g.decoys.filter(d=>d.life>0&&d.hp>0);
     const bossActive = g.enemies.some(e => e.kind === 'boss' && e.hp > 0);
