@@ -95,7 +95,7 @@
       } else if (type === 'droneFire') {
         // Laser visuals carry the one-shot sound, avoiding a second attack click.
       } else if (type === 'droneLaser') {
-        this.hiss(.055,.026,4200,t);this.tone(1320,.075,'sawtooth',.038,t,410);this.tone(2480,.05,'square',.014,t+.008,1120);
+        const tier=Math.min(5,Number(weapon)||0);this.hiss(.055,.026+tier*.003,4200+tier*260,t);this.tone(1320+tier*95,.075,'sawtooth',.038+tier*.002,t,410+tier*35);this.tone(2480+tier*140,.05,'square',.014+tier*.001,t+.008,1120+tier*65);
       } else if (type === 'droneIntercept') {
         this.hiss(.09,.026,2600,t);this.tone(920,.075,'triangle',.025,t,420);this.tone(1540,.11,'sine',.018,t+.025,760);
       } else if (type === 'droneDock') {

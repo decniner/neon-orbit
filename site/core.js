@@ -66,7 +66,7 @@
       enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], vortices: [], events: [],
       score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
       kills: 0, combo: 0, comboUntil: 0, novaCharge: 0, dashCooldown: 0, dashTime: 0,
-      invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0,
+      invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0, droneWeaponLevel:0,
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
       heading: -Math.PI / 2, roll: 0, rollTime: 0, rollDirection: 1, rollHeld: false,
       gunAngle: -Math.PI / 2, gunSide: 1, gunFlash: 0, dashDirection: {x: 0, y: -1},
@@ -121,6 +121,10 @@
     const best = g.choices.reduce((winner, id) => score(id) > score(winner) ? id : winner, g.choices[0]);
     if (best) chooseUpgrade(g, best);
   }
+  function improveDroneWeapons(g,source) {
+    g.droneWeaponLevel=Math.min(5,(g.droneWeaponLevel||0)+1);
+    g.events.push({type:'droneWeaponUpgrade',level:g.droneWeaponLevel,source});
+  }
   function chooseUpgrade(g, id) {
     if (g.mode !== 'upgrade' || !g.choices.includes(id) || !UPGRADES[id] || (g.upgrades[id] || 0) >= UPGRADES[id].cap) return false;
     g.upgrades[id] = (g.upgrades[id] || 0) + 1;
@@ -130,6 +134,7 @@
     if (id === 'magnet') g.magnetRange += 40;
     if (id === 'dash') g.dashMaxCooldown *= .82;
     if (id === 'repair') { g.hp = g.maxHp; g.score += 500; }
+    improveDroneWeapons(g,'ship');
     g.level++; g.xpNeeded = 8 + (g.level - 1) * 4;
     g.invulnerable = Math.max(g.invulnerable, 1.2); g.choices = []; g.mode = 'playing';
     g.events.push({type:'upgrade', id});
@@ -233,6 +238,7 @@
     });
   }
   function updateDrones(g,dt) {
+    const weaponLevel=Math.min(5,(g.droneWeaponLevel||0)+(g.weaponTime>0?1:0));
     for(const d of g.drones){
       if(d.state==='docked'){
         const phase=g.time*1.65+d.orbitPhase,orbitX=g.player.x+Math.cos(phase)*44,orbitY=g.player.y+Math.sin(phase)*27;
@@ -263,7 +269,7 @@
         if(dist>285)flyDrone(d,projectile.x,projectile.y,620,dt);
         else{
           d.fireIn-=dt;
-          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.16;d.state='return';d.target=null;}
+          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.16*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;}
         }
         continue;
       }
@@ -273,7 +279,7 @@
       if(Math.hypot(target.x-d.x,target.y-d.y)<target.r+48)d.state='engage';
       if(Math.hypot(target.x-d.x,target.y-d.y)<390){
         d.fireIn-=dt;
-        if(d.fireIn<=0){const speed=690,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2,life:1.1,kind:'drone',damage:1,pierce:1,hitEnemies:new Set()});d.fireIn=.36;g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id});}
+        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.fireIn=.36*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel});}
       }
     }
   }
@@ -434,6 +440,7 @@
       const defeatedStage=e.stage||g.stage,bonus = 1000 + defeatedStage * 100; g.score += bonus; g.bossesDefeated++; g.xp += 4;
       const coreId=['aegis','cinder','sentinel'][(defeatedStage-1)%3];
       g.guardianCores[coreId]++;
+      improveDroneWeapons(g,'guardian');
       if(coreId==='aegis')g.aegisShield=true;
       if(coreId==='cinder')g.damageBonus++;
       g.enemyBullets.length = 0;
