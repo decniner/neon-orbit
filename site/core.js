@@ -71,7 +71,7 @@
       heading: -Math.PI / 2, roll: 0, rollTime: 0, rollDirection: 1, rollHeld: false,
       gunAngle: -Math.PI / 2, gunSide: 1, gunFlash: 0, dashDirection: {x: 0, y: -1},
       playerMissiles: [], missileIn: 0,
-      drones: [-1,1].map((side,index)=>({id:index,side,x:WIDTH/2+side*17,y:HEIGHT/2+6,vx:0,vy:0,state:'docked',charge:1,sortie:0,fireIn:.15,launchAt:1.05+index*1.3}))
+      drones: [-1,1].map((side,index)=>({id:index,side,x:WIDTH/2+side*17,y:HEIGHT/2+6,vx:0,vy:0,state:'docked',charge:1,sortie:0,fireIn:.15,launchAt:1.05+index*1.3,orbitPhase:index*Math.PI}))
     };
   }
   function destinationFor(stage) { return DESTINATIONS[(Math.max(1, Math.floor(stage)) - 1) % DESTINATIONS.length]; }
@@ -196,6 +196,12 @@
     }
     return target;
   }
+  function droneNeedsDeploy(g,target) {
+    if(!target)return false;
+    const range=distance(target,g.player),canFire=target.y-target.r<=g.cameraY+(HEIGHT-520);
+    const imminent=canFire&&Number.isFinite(target.fireIn)&&target.fireIn<.85;
+    return range<=560||(imminent&&range<=780)||(target.kind==='boss'&&range<=680);
+  }
   function droneLaneBlocked(g,d,target) {
     const dx=target.x-d.x,dy=target.y-d.y,length2=dx*dx+dy*dy||1;
     return g.enemies.some(enemy=>{
@@ -209,8 +215,10 @@
   function updateDrones(g,dt) {
     for(const d of g.drones){
       if(d.state==='docked'){
-        d.x=g.player.x+d.side*17;d.y=g.player.y+7;d.vx=g.player.vx;d.vy=g.player.vy;
-        if(g.time>=d.launchAt&&(d.target=droneTarget(g,d))){d.state='outbound';d.sortie=0;d.retargetIn=.7;d.fireIn=.12;g.events.push({type:'droneLaunch',x:d.x,y:d.y,id:d.id});}
+        const phase=g.time*1.65+d.orbitPhase,orbitX=g.player.x+Math.cos(phase)*44,orbitY=g.player.y+Math.sin(phase)*27;
+        flyDrone(d,orbitX,orbitY,220,dt);
+        const target=droneTarget(g,d);
+        if(g.time>=d.launchAt&&droneNeedsDeploy(g,target)){d.target=target;d.state='outbound';d.sortie=0;d.retargetIn=.7;d.fireIn=.12;g.events.push({type:'droneLaunch',x:d.x,y:d.y,id:d.id});}
         continue;
       }
       if(d.state==='recharge'){

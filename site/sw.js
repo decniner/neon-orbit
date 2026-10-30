@@ -1,4 +1,4 @@
-const CACHE = 'neon-orbit-mobile-v19';
+const CACHE = 'neon-orbit-mobile-v20';
 const FILES = [
   './', './index.html', './mobile.css?v=44', './manifest.webmanifest',
   './styles.css?v=44', './core.js?v=44', './game.js?v=44', './audio.js?v=44', './voices.js?v=44',

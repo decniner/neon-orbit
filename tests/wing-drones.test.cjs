@@ -10,6 +10,37 @@ test('every run starts with a two-drone wing and staggered deployment', () => {
   assert.ok(game.drones[0].launchAt < game.drones[1].launchAt);
 });
 
+test('docked drones continuously orbit around the ship while awaiting a useful target', () => {
+  const game = core.createGame(() => 0.5);
+  core.start(game);
+  game.spawnIn = 100;
+  game.forwardSpeed = 0;
+  game.fireIn = 100;
+  for(const drone of game.drones)drone.launchAt=100;
+
+  for(let i=0;i<26;i++)core.step(game,.05);
+
+  assert.ok(game.drones.every(drone=>drone.state==='docked'));
+  assert.ok(game.drones.every(drone=>Math.hypot(drone.x-game.player.x,drone.y-game.player.y)>30));
+});
+
+test('drones stay in orbit around distant enemies and launch when the fight reaches them', () => {
+  const game = core.createGame(() => 0.5);
+  core.start(game);
+  game.spawnIn = 100;
+  game.forwardSpeed = 0;
+  game.fireIn = 100;
+  const enemy = {x:game.player.x,y:game.player.y-700,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:4};
+  game.enemies.push(enemy);
+  game.drones[0].launchAt=0;
+
+  core.step(game,.05);
+  assert.equal(game.drones[0].state,'docked');
+  enemy.y=game.player.y-220;
+  core.step(game,.05);
+  assert.equal(game.drones[0].state,'outbound');
+});
+
 test('zero-time simulation steps keep enemy velocity finite for lead targeting', () => {
   const game = core.createGame(() => 0.5);
   core.start(game);
