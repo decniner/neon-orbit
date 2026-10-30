@@ -64,6 +64,7 @@
       if (!this.enabled || !this.ready) return;
       const t = this.context.currentTime;
       if (type === 'fire') {
+        if(weapon==='arc'){this.hiss(.14,.03,900,t);this.tone(390,.18,'sawtooth',.042,t,115);this.tone(1180,.09,'triangle',.022,t+.015,430);return;}
         const f=weapon==='pulse'?250:weapon==='seeker'?310:weapon==='nova'?410:620;
         this.tone(f,.09,'sawtooth',weapon==='pulse'?.03:.026,t,f*.42);
         this.tone(f*2.03,.035,'triangle',.014,t);

@@ -4,7 +4,7 @@
   let WIDTH = 1000;
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
-  const WEAPONS = ['triple', 'pulse', 'seeker', 'nova'];
+  const WEAPONS = ['triple', 'pulse', 'seeker', 'nova', 'arc'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
     {name:'ASHEN NEBULA',boss:'CINDER MATRIARCH',color:'#efae86'},
@@ -296,6 +296,18 @@
     const a = -Math.PI / 2;
     const overdrive = g.novaCharge >= 1;
     const kind = overdrive ? 'nova' : g.weaponTime > 0 ? g.weaponKind : 'standard';
+    if(kind==='arc'){
+      const chained=new Set();let from={x:g.player.x,y:g.player.y-10},next=target;
+      for(let link=0;link<3&&next;link++){
+        chained.add(next);next.hp-=2+g.damageBonus;next.hitFlash=.14;
+        g.events.push({type:'arcHit',x:from.x,y:from.y,toX:next.x,toY:next.y,id:link,damage:2+g.damageBonus});
+        if(next.hp<=0)defeat(g,next);
+        from=next;let closest=null,range=210;
+        for(const enemy of g.enemies){if(enemy.hp<=0||chained.has(enemy))continue;const gap=distance(enemy,from);if(gap<range){range=gap;closest=enemy;}}
+        next=closest;
+      }
+      g.gunAngle=a;g.gunFlash=.12;g.fireIn=.4*g.fireRate;g.events.push({type:'fire',weaponKind:kind,x:g.player.x,y:g.player.y,angle:a,side:g.gunSide});return;
+    }
     const weaponLanes = kind === 'triple' ? [-.2, 0, .2] : kind === 'seeker' ? [-.1, .1] : kind === 'nova' ? [-.12,.12] : [0];
     const damageStacks = g.upgrades.damage || 0;
     const upgradeLanes = damageStacks === 1 ? [-.16, 0, .16] : damageStacks === 2 ? [-.25, -.08, .08, .25] : damageStacks >= 3 ? [-.28, -.16, 0, .16, .28] : [0];
