@@ -36,8 +36,11 @@ assert.ok(sound.compressor, 'sound output is protected by a dynamics compressor'
 assert.ok(sound.musicBus.connections.includes(sound.master), 'music has an independent mix bus');
 assert.ok(sound.effectsBus.connections.includes(sound.master), 'effects have an independent mix bus');
 assert.equal(sound.ambienceBus.gain.value, 0, 'there is no always-on engine or ambience layer');
+assert.equal(sound.musicBus.gain.value, 0, 'the original music is silent until active gameplay');
 sound.update('playing', false);
 assert.equal(sound.musicCue, 'flight', 'normal flight music selects its own cue');
+assert.ok(context.sources.length>0, 'flight starts a scheduled original music phrase');
+assert.ok(Math.min(...context.sources.map(source=>source.frequency.value).filter(Boolean))>70, 'the music avoids a sub-bass engine-like drone');
 context.currentTime = .5;
 sound.update('playing', true);
 assert.equal(sound.musicCue, 'boss', 'a boss arrival changes the adaptive cue');

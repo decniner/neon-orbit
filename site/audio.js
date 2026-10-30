@@ -14,7 +14,7 @@
       this.compressor = c.createDynamicsCompressor();
       this.compressor.threshold.value = -19; this.compressor.knee.value = 15;
       this.compressor.ratio.value = 3.2; this.compressor.attack.value = .008; this.compressor.release.value = .18;
-      this.musicBus = c.createGain(); this.musicBus.gain.value = .48;
+      this.musicBus = c.createGain(); this.musicBus.gain.value = 0;
       this.ambienceBus = c.createGain(); this.ambienceBus.gain.value = 0;
       this.effectsBus = c.createGain(); this.effectsBus.gain.value = .88;
       this.musicBus.connect(this.master); this.ambienceBus.connect(this.master); this.effectsBus.connect(this.master);
@@ -105,24 +105,24 @@
       const cue = boss ? 'boss' : 'flight';
       if (this.musicalMode !== 'playing' || this.nextBeat < now - .3 || this.musicCue !== cue) {
         this.nextBeat = now + .04; this.beat = 0; this.musicCue = cue;
+        if (cue === 'boss') this.effect('boss');
       }
-      this.musicBus.gain.setTargetAtTime(.48, now, .22);
+      this.musicBus.gain.setTargetAtTime(.34, now, .35);
       this.musicalMode = 'playing';
       const hz = n => 440 * Math.pow(2, (n - 69) / 12);
       while (this.nextBeat < now + .16) {
-        const t = this.nextBeat, beat = this.beat++, step = beat % 16, rootNote = [45, 41, 48, 43][Math.floor(beat / 16) % 4];
-        if (step % 8 === 0) this.tone(hz(rootNote + 0), .28, 'triangle', boss ? .028 : .022, t, hz(rootNote - 5), false, 'musicBus');
-        if (step % 4 === 0) {
-          this.tone(hz(rootNote + 12), .48, 'triangle', boss ? .025 : .022, t, undefined, true, 'musicBus');
-          this.tone(hz(rootNote + 19), .42, 'sine', .012, t + .012, undefined, true, 'musicBus');
+        const t=this.nextBeat,beat=this.beat++,step=beat%32,bar=Math.floor(beat/32),key=[0,0,3,5][bar%4],rootNote=key+45;
+        const melody=[12,19,15,12,22,19,15,10,12,19,24,22,19,15,12,7,12,19,15,12,24,22,19,15,17,22,19,15,12,10,7,10];
+        const bass=[0,0,7,0,5,0,7,0][step%8];
+        if(step%8===0)this.tone(hz(rootNote+bass),.42,'triangle',boss?.052:.038,t,hz(rootNote-7+bass),false,'musicBus');
+        if(step%4===0){
+          const chord=[rootNote+12,rootNote+16,rootNote+19];
+          for(let i=0;i<chord.length;i++)this.tone(hz(chord[i]),.68,i===0?'triangle':'sine',boss?.014:.012,t+i*.018,undefined,true,'musicBus');
         }
-        if (step % 4 === 2) this.hiss(.026, boss ? .009 : .006, 6900, t);
-        if ([0, 3, 5, 7, 8, 11, 13, 15].includes(step)) {
-          const melody = [0, 7, 12, 15, 19, 12, 7, 3][step % 8] + 12;
-          this.tone(hz(rootNote + melody), boss ? .28 : .34, boss ? 'triangle' : 'sine', boss ? .018 : .014, t, undefined, true, 'musicBus');
-        }
-        if (boss && (step === 6 || step === 14)) this.tone(hz(rootNote + 7), .12, 'square', .016, t, hz(rootNote - 5), false, 'musicBus');
-        this.nextBeat += .25;
+        if(step%2===0){const note=melody[step];this.tone(hz(rootNote+note),boss?.2:.24,'triangle',boss?.026:.023,t,undefined,true,'musicBus');}
+        if(step===4||step===12||step===20||step===28){this.tone(hz(rootNote+melody[(step+2)%32]+12),.14,'sine',boss?.017:.014,t+.06,undefined,true,'musicBus');}
+        if(boss&&(step===7||step===15||step===23||step===31))this.tone(hz(rootNote+7),.1,'square',.012,t,hz(rootNote-5));
+        this.nextBeat+=.1875;
       }
     }
   }
