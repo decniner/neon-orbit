@@ -259,8 +259,12 @@
       if(!target||target.kind!=='projectile'&&d.sortie>=3.6){d.state='return';d.target=null;g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});continue;}
       if(target.kind==='projectile'){
         const projectile=target.projectile;
-        flyDrone(d,projectile.x,projectile.y,620,dt);
-        if(distance(d,projectile)<(projectile.r||3)+11){projectile.life=0;projectile.hp=0;d.state='return';d.target=null;g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});}
+        const dist=distance(d,projectile);
+        if(dist>285)flyDrone(d,projectile.x,projectile.y,620,dt);
+        else{
+          d.fireIn-=dt;
+          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.16;d.state='return';d.target=null;}
+        }
         continue;
       }
       d.blockedLane=droneLaneBlocked(g,d,target);
@@ -269,7 +273,7 @@
       if(Math.hypot(target.x-d.x,target.y-d.y)<target.r+48)d.state='engage';
       if(Math.hypot(target.x-d.x,target.y-d.y)<390){
         d.fireIn-=dt;
-        if(d.fireIn<=0){const speed=690,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2,life:1.1,kind:'drone',damage:1,pierce:1,hitEnemies:new Set()});d.fireIn=.36;g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id});}
+        if(d.fireIn<=0){const speed=690,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2,life:1.1,kind:'drone',damage:1,pierce:1,hitEnemies:new Set()});d.fireIn=.36;g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id});}
       }
     }
   }

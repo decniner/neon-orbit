@@ -56,8 +56,9 @@ assert.ok(context.sources.length>=novaCount+5,'Nova Lancers get a distinct charg
 const droneCount=context.sources.length;
 sound.effect('droneLaunch');
 sound.effect('droneFire');
+sound.effect('droneLaser');
 sound.effect('droneDock');
-assert.ok(context.sources.length>=droneCount+5,'drone flight has distinct launch, firing, and docking sounds');
+assert.ok(context.sources.length>=droneCount+5,'drone flight has a distinct, delicate laser firing cue');
 sound.effect('explosion');
 const noiseCount=sound.noiseBuffers.size;
 sound.effect('explosion');

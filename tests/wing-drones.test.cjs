@@ -71,20 +71,21 @@ test('drones ignore harmless distant or receding shots and preserve their orbit'
   assert.equal(game.drones[0].state,'docked');
 });
 
-test('a drone destroys an incoming projectile by physically intercepting it', () => {
+test('a drone destroys an incoming projectile with a laser beam', () => {
   const game = core.createGame(() => 0.5);
   core.start(game);
   game.spawnIn = 100;
   game.forwardSpeed = 0;
   game.fireIn = 100;
   const drone=game.drones[0],projectile={x:game.player.x+16,y:game.player.y-30,vx:0,vy:220,r:6,life:3,kind:'missile'};
-  drone.x=projectile.x+3;drone.y=projectile.y;drone.state='engage';drone.target={kind:'projectile',projectile};drone.retargetIn=1;
+  drone.x=projectile.x+3;drone.y=projectile.y;drone.state='engage';drone.target={kind:'projectile',projectile};drone.retargetIn=1;drone.fireIn=0;
   game.enemyBullets.push(projectile);
 
   core.step(game,.02);
 
   assert.ok(projectile.life<=0);
   assert.ok(game.events.some(event=>event.type==='droneIntercept'));
+  assert.ok(game.events.some(event=>event.type==='droneLaser'&&event.defensive));
 });
 
 test('zero-time simulation steps keep enemy velocity finite for lead targeting', () => {
