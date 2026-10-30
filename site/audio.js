@@ -4,17 +4,23 @@
   class SoundEngine {
     constructor({context = null, enabled = true} = {}) {
       this.context = context; this.enabled = enabled; this.ready = false;
-      this.nextBeat = 0; this.beat = 0; this.voices = 0; this.musicalMode = '';
+      this.nextBeat = 0; this.beat = 0; this.voices = 0; this.musicalMode = ''; this.musicCue = '';
       if (context) this.setup();
     }
     setup() {
       if (this.ready) return;
       const c = this.context;
-      this.master = c.createGain(); this.master.gain.value = this.enabled ? .65 : 0;
-      this.master.connect(c.destination);
-      this.echo = c.createDelay(.5); this.echo.delayTime.value = .225;
-      const feedback = c.createGain(), wet = c.createGain(); feedback.gain.value = .22; wet.gain.value = .16;
-      this.echo.connect(feedback); feedback.connect(this.echo); this.echo.connect(wet); wet.connect(this.master);
+      this.master = c.createGain(); this.master.gain.value = this.enabled ? .78 : 0;
+      this.compressor = c.createDynamicsCompressor();
+      this.compressor.threshold.value = -19; this.compressor.knee.value = 15;
+      this.compressor.ratio.value = 3.2; this.compressor.attack.value = .008; this.compressor.release.value = .18;
+      this.musicBus = c.createGain(); this.musicBus.gain.value = .48;
+      this.effectsBus = c.createGain(); this.effectsBus.gain.value = .88;
+      this.musicBus.connect(this.master); this.effectsBus.connect(this.master);
+      this.master.connect(this.compressor); this.compressor.connect(c.destination);
+      this.echo = c.createDelay(.5); this.echo.delayTime.value = .24;
+      const feedback = c.createGain(), wet = c.createGain(); feedback.gain.value = .2; wet.gain.value = .13;
+      this.echo.connect(feedback); feedback.connect(this.echo); this.echo.connect(wet); wet.connect(this.musicBus);
       this.noise = c.createBuffer(1, Math.floor(c.sampleRate * .25), c.sampleRate);
       const data = this.noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
@@ -31,25 +37,25 @@
     setEnabled(enabled) {
       this.enabled = enabled;
       if (enabled) this.unlock();
-      if (this.ready) { this.master.gain.cancelScheduledValues(this.context.currentTime); this.master.gain.setTargetAtTime(enabled ? .65 : 0, this.context.currentTime, .02); }
+      if (this.ready) { this.master.gain.cancelScheduledValues(this.context.currentTime); this.master.gain.setTargetAtTime(enabled ? .78 : 0, this.context.currentTime, .02); }
     }
-    tone(freq, duration = .08, type = 'sine', volume = .025, when, endFreq, echo = false) {
-      if (!this.enabled || !this.ready || this.voices > 48) return;
+    tone(freq, duration = .08, type = 'sine', volume = .025, when, endFreq, echo = false, bus = 'effectsBus') {
+      if (!this.enabled || !this.ready || this.voices > 44) return;
       const c = this.context, t = when ?? c.currentTime, o = c.createOscillator(), a = c.createGain();
       o.type = type; o.frequency.setValueAtTime(freq, t);
       if (endFreq) o.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + duration);
-      a.gain.setValueAtTime(.0001, t); a.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), t + .005);
+      a.gain.setValueAtTime(.0001, t); a.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), t + .008);
       a.gain.exponentialRampToValueAtTime(.0001, t + duration);
-      o.connect(a); a.connect(this.master); if (echo) a.connect(this.echo);
+      o.connect(a); a.connect(this[bus]); if (echo) a.connect(this.echo);
       this.voices++; o.onended = () => { this.voices--; o.disconnect(); a.disconnect(); };
-      o.start(t); o.stop(t + duration + .02);
+      o.start(t); o.stop(t + duration + .025);
     }
     hiss(duration = .08, volume = .025, frequency = 1800, when) {
-      if (!this.enabled || !this.ready || this.voices > 48) return;
+      if (!this.enabled || !this.ready || this.voices > 44) return;
       const c = this.context, t = when ?? c.currentTime, source = c.createBufferSource(), filter = c.createBiquadFilter(), gain = c.createGain();
       source.buffer = this.noise; filter.type = 'highpass'; filter.frequency.value = frequency;
       gain.gain.setValueAtTime(volume, t); gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
-      source.connect(filter); filter.connect(gain); gain.connect(this.master);
+      source.connect(filter); filter.connect(gain); gain.connect(this.effectsBus);
       this.voices++; source.onended = () => { this.voices--; source.disconnect(); filter.disconnect(); gain.disconnect(); };
       source.start(t); source.stop(t + duration);
     }
@@ -67,6 +73,8 @@
         this.tone(180, .065, 'square', .035, t, 72); this.hiss(.055, .016, 2200, t);
       } else if (type === 'enemyMissile') {
         this.hiss(.24, .035, 500, t); this.tone(95, .2, 'sawtooth', .035, t, 42);
+      } else if (type === 'missileWarning') {
+        this.tone(1040, .095, 'square', .032, t); this.tone(780, .11, 'square', .026, t + .13);
       } else if (type === 'explosion') {
         this.hiss(.38, .085, 180, t); this.tone(92, .42, 'sine', .12, t, 28);
       } else if (type === 'dash') {
@@ -78,22 +86,34 @@
       }
     }
     update(mode, boss = false) {
-      if (!this.enabled || !this.ready) return;
+      if (!this.ready) return;
       const c = this.context, now = c.currentTime;
-      if (mode !== 'playing') { this.nextBeat = now; this.musicalMode = mode; return; }
-      if (this.musicalMode !== 'playing' || this.nextBeat < now - .2) this.nextBeat = now;
+      if (!this.enabled) return;
+      if (mode !== 'playing') {
+        this.musicBus.gain.setTargetAtTime(.0001, now, .08);
+        this.nextBeat = now; this.musicalMode = mode; this.musicCue = ''; return;
+      }
+      const cue = boss ? 'boss' : 'flight';
+      if (this.musicalMode !== 'playing' || this.nextBeat < now - .3 || this.musicCue !== cue) {
+        this.nextBeat = now + .04; this.beat = 0; this.musicCue = cue;
+      }
+      this.musicBus.gain.setTargetAtTime(.48, now, .22);
       this.musicalMode = 'playing';
-      while (this.nextBeat < now + .1) {
-        const t = this.nextBeat, beat = this.beat++, rootNote = [45, 41, 48, 43][Math.floor(beat / 16) % 4];
-        const hz = n => 440 * Math.pow(2, (n - 69) / 12);
-        if (beat % 4 === 0) {
-          this.tone(115, .16, 'sine', .1, t, 32);
-          this.tone(hz(rootNote), .25, 'triangle', .035, t);
+      const hz = n => 440 * Math.pow(2, (n - 69) / 12);
+      while (this.nextBeat < now + .16) {
+        const t = this.nextBeat, beat = this.beat++, step = beat % 16, rootNote = [45, 41, 48, 43][Math.floor(beat / 16) % 4];
+        if (step % 8 === 0) this.tone(hz(rootNote - 12), .34, 'sine', boss ? .085 : .07, t, hz(rootNote - 22), false, 'musicBus');
+        if (step % 4 === 0) {
+          this.tone(hz(rootNote + 12), .48, 'triangle', boss ? .025 : .022, t, undefined, true, 'musicBus');
+          this.tone(hz(rootNote + 19), .42, 'sine', .012, t + .012, undefined, true, 'musicBus');
         }
-        if (beat % (boss ? 1 : 2) === 0) this.hiss(.035, .011, 6500, t);
-        if (beat % 8 === 4) this.hiss(.08, .019, 1600, t);
-        this.tone(hz(rootNote + 12 + [0, 7, 12, 15, 19, 12, 7, 3][beat % 8]), .22, 'sine', boss ? .021 : .014, t, undefined, true);
-        this.nextBeat += .15;
+        if (step % 4 === 2) this.hiss(.026, boss ? .009 : .006, 6900, t);
+        if ([0, 3, 5, 7, 8, 11, 13, 15].includes(step)) {
+          const melody = [0, 7, 12, 15, 19, 12, 7, 3][step % 8] + 12;
+          this.tone(hz(rootNote + melody), boss ? .28 : .34, boss ? 'triangle' : 'sine', boss ? .018 : .014, t, undefined, true, 'musicBus');
+        }
+        if (boss && (step === 6 || step === 14)) this.tone(hz(rootNote + 7), .12, 'square', .016, t, hz(rootNote - 5), false, 'musicBus');
+        this.nextBeat += .25;
       }
     }
   }

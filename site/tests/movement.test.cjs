@@ -19,3 +19,14 @@ assert.ok(game.player.vx < 240, 'release immediately begins braking');
 const velocityBeforeTurn = game.player.vx;
 core.step(game, 0.05, { x: -1 });
 assert.ok(game.player.vx < velocityBeforeTurn && game.player.vx > -240, 'direction changes blend smoothly rather than snapping across the screen');
+
+function travelAt(stepSize) {
+  const craft = core.createGame(() => 0.5);
+  core.start(craft);
+  craft.spawnIn=100; craft.supplyIn=100; craft.fireIn=100;
+  for (let elapsed=0;elapsed<.5-1e-8;elapsed+=stepSize) core.step(craft,Math.min(stepSize,.5-elapsed),{x:1});
+  return {x:craft.player.x,vx:craft.player.vx};
+}
+const at30=travelAt(1/30),at60=travelAt(1/60),at120=travelAt(1/120);
+assert.ok(Math.abs(at30.x-at120.x)<.01,'movement distance is consistent from 30 to 120 updates per second');
+assert.ok(Math.abs(at30.vx-at120.vx)<.01,'movement velocity is consistent from 30 to 120 updates per second');

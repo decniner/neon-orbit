@@ -344,11 +344,11 @@
     } else g.roll = 0;
     g.dashTime = Math.max(0, g.dashTime - dt);
     const speed = dashing ? 850 : 240;
-    const response = 1 - Math.exp(-dt * 28);
-    g.player.vx += (x * speed - g.player.vx) * response;
-    g.player.vy += (y * speed - g.player.vy) * response;
-    g.player.x = clamp(g.player.x + g.player.vx * dt, CORRIDOR.left, CORRIDOR.right);
-    g.player.y += g.player.vy * dt - g.forwardSpeed * dt;
+    const responseRate=34,decay=Math.exp(-dt*responseRate),targetVx=x*speed,targetVy=y*speed,oldVx=g.player.vx,oldVy=g.player.vy;
+    const dx=targetVx*dt+(oldVx-targetVx)*(1-decay)/responseRate,dy=targetVy*dt+(oldVy-targetVy)*(1-decay)/responseRate;
+    g.player.vx=targetVx+(oldVx-targetVx)*decay;g.player.vy=targetVy+(oldVy-targetVy)*decay;
+    g.player.x = clamp(g.player.x + dx, CORRIDOR.left, CORRIDOR.right);
+    g.player.y += dy - g.forwardSpeed * dt;
     g.cameraY -= g.forwardSpeed * dt;
     g.cameraY = clamp(g.cameraY, g.player.y - 50, g.player.y + 360);
     g.spawnIn -= dt;
