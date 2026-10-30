@@ -30,3 +30,11 @@ function travelAt(stepSize) {
 const at30=travelAt(1/30),at60=travelAt(1/60),at120=travelAt(1/120);
 assert.ok(Math.abs(at30.x-at120.x)<.01,'movement distance is consistent from 30 to 120 updates per second');
 assert.ok(Math.abs(at30.vx-at120.vx)<.01,'movement velocity is consistent from 30 to 120 updates per second');
+
+function responseAfter(seconds) {
+  const craft=core.createGame(()=>.5);core.start(craft);
+  craft.spawnIn=100;craft.supplyIn=100;craft.fireIn=100;
+  core.step(craft,seconds,{x:1});
+  return craft.player.vx;
+}
+assert.ok(responseAfter(.02)>150,'steering responds firmly within 20ms for a light, immediate feel');
