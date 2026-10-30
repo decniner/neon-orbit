@@ -4,7 +4,7 @@
   let WIDTH = 1000;
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
-  const WEAPONS = ['triple', 'vortex', 'pulse', 'seeker', 'nova', 'arc'];
+  const WEAPONS = ['triple', 'vortex', 'eclipse', 'pulse', 'seeker', 'nova', 'arc'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
     {name:'ASHEN NEBULA',boss:'CINDER MATRIARCH',color:'#efae86'},
@@ -318,15 +318,15 @@
     const damageStacks = g.upgrades.damage || 0;
     const upgradeLanes = damageStacks === 1 ? [-.16, 0, .16] : damageStacks === 2 ? [-.25, -.08, .08, .25] : damageStacks >= 3 ? [-.28, -.16, 0, .16, .28] : [0];
     const offsets = [...new Set([...weaponLanes, ...upgradeLanes])];
-    const speed = kind === 'pulse' ? 850 : kind === 'seeker' ? 440 : kind === 'nova' ? 510 : kind === 'vortex' ? 370 : 660;
+    const speed = kind === 'pulse' ? 850 : kind === 'seeker' ? 440 : kind === 'nova' ? 510 : kind === 'vortex' ? 370 : kind === 'eclipse' ? 1120 : 660;
     g.gunAngle = a; g.gunFlash = .09; g.gunSide *= -1;
     const side = g.gunSide,body=0;
     for (const offset of offsets) g.bullets.push({x: g.player.x + Math.cos(body)*side*11 - Math.sin(body)*-8 + Math.cos(a)*9, y: g.player.y + Math.sin(body)*side*11 + Math.cos(body)*-8 + Math.sin(a)*9,
       vx: Math.cos(a + offset) * speed, vy: Math.sin(a + offset) * speed,
-      life: kind === 'seeker' ? 2.2 : kind === 'vortex' ? 2.8 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? (overdrive ? 12 : 9) : kind === 'vortex' ? 8 : 4,
-      boosted: kind !== 'standard', kind, overdrive, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'vortex' ? 3 : kind === 'nova' ? (overdrive ? 5 : 3) : 1) + g.damageBonus,
-      pierce: kind === 'pulse' ? 2 : 1, homing: kind === 'seeker' || kind === 'vortex', turnRate:kind==='vortex'?2.4:undefined, trailIn: .02, hitEnemies: new Set()});
-    g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : kind === 'nova' ? .48 : kind === 'vortex' ? .82 : .28) * g.fireRate;
+      life: kind === 'seeker' ? 2.2 : kind === 'vortex' ? 2.8 : 1.6, r: kind === 'pulse' ? 7 : kind === 'nova' ? (overdrive ? 12 : 9) : kind === 'vortex' ? 8 : kind === 'eclipse' ? 6 : 4,
+      boosted: kind !== 'standard', kind, overdrive, damage: (kind === 'pulse' ? 3 : kind === 'seeker' ? 2 : kind === 'vortex' ? 3 : kind === 'eclipse' ? 5 : kind === 'nova' ? (overdrive ? 5 : 3) : 1) + g.damageBonus,
+      pierce: kind === 'pulse' ? 2 : kind === 'eclipse' ? 4 : 1, homing: kind === 'seeker' || kind === 'vortex', turnRate:kind==='vortex'?2.4:undefined, trailIn: .02, hitEnemies: new Set()});
+    g.fireIn = (kind === 'triple' ? .16 : kind === 'pulse' ? .38 : kind === 'seeker' ? .42 : kind === 'nova' ? .48 : kind === 'vortex' ? .82 : kind === 'eclipse' ? .56 : .28) * g.fireRate;
     if(overdrive){g.novaCharge=0;g.combo=0;}
     g.events.push({type: 'fire', weaponKind: kind, overdrive, x:g.player.x, y:g.player.y, angle:a, side});
     if(overdrive)g.events.push({type:'novaOverdrive',x:g.player.x,y:g.player.y});
@@ -529,7 +529,7 @@
         (b.hitEnemies ||= new Set()).add(e);
         if(b.kind==='vortex'){openVortex(g,b);continue;}
         if((b.kind==='seeker'&&b.homing)||b.kind==='nova'){detonate(g,b,b.x,b.y,'player');continue;}
-        e.hp -= b.damage || 1; e.hitFlash = .1; g.events.push({type:'impact',x:b.x,y:b.y,damage:b.damage||1}); b.pierce = (b.pierce || 1) - 1;
+        e.hp -= b.damage || 1; e.hitFlash = .1; g.events.push({type:'impact',x:b.x,y:b.y,damage:b.damage||1,weaponKind:b.kind}); b.pierce = (b.pierce || 1) - 1;
         if (b.pierce <= 0) b.life = 0;
         if (e.hp <= 0) defeat(g, e);
       }

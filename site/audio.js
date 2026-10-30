@@ -66,6 +66,7 @@
       if (type === 'fire') {
         if(weapon==='arc'){this.hiss(.14,.03,900,t);this.tone(390,.18,'sawtooth',.042,t,115);this.tone(1180,.09,'triangle',.022,t+.015,430);return;}
         if(weapon==='vortex'){this.tone(145,.23,'sawtooth',.033,t,54);this.tone(720,.13,'sine',.022,t+.018,190);this.hiss(.16,.018,1150,t);return;}
+        if(weapon==='eclipse'){this.tone(96,.24,'sawtooth',.065,t,32);this.tone(1680,.095,'square',.032,t+.025,480);this.hiss(.18,.045,1850,t);return;}
         const f=weapon==='pulse'?250:weapon==='seeker'?310:weapon==='nova'?410:620;
         this.tone(f,.09,'sawtooth',weapon==='pulse'?.03:.026,t,f*.42);
         this.tone(f*2.03,.035,'triangle',.014,t);
