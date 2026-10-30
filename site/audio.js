@@ -84,6 +84,12 @@
         this.hiss(.38, .095, 160, t); this.tone(82, .48, 'sine', .14, t, 25);this.tone(440,.13,'triangle',.035,t+.018,90);this.tone(1380,.055,'sine',.025,t);
       } else if (type === 'dash') {
         this.hiss(.18, .05, 1200, t); this.tone(140, .18, 'sine', .04, t, 520);
+      } else if (type === 'droneLaunch') {
+        this.hiss(.11,.018,1800,t);this.tone(720,.13,'triangle',.016,t,1120);
+      } else if (type === 'droneFire') {
+        this.tone(1480,.035,'square',.008,t,920);
+      } else if (type === 'droneDock') {
+        this.tone(930,.11,'sine',.014,t,1380);this.tone(1240,.12,'triangle',.009,t+.035);
       } else if (type === 'upgrade' || type === 'launch') {
         for (const [i, f] of [330, 440, 660, 880].entries()) this.tone(f, .32, 'sine', .04, t + i * .075, undefined, true);
       } else if (type === 'boss') {

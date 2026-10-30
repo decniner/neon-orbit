@@ -70,7 +70,8 @@
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
       heading: -Math.PI / 2, roll: 0, rollTime: 0, rollDirection: 1, rollHeld: false,
       gunAngle: -Math.PI / 2, gunSide: 1, gunFlash: 0, dashDirection: {x: 0, y: -1},
-      playerMissiles: [], missileIn: 0
+      playerMissiles: [], missileIn: 0,
+      drones: [-1,1].map((side,index)=>({id:index,side,x:WIDTH/2+side*17,y:HEIGHT/2+6,vx:0,vy:0,state:'docked',charge:1,sortie:0,fireIn:.15,launchAt:1.05+index*1.3}))
     };
   }
   function destinationFor(stage) { return DESTINATIONS[(Math.max(1, Math.floor(stage)) - 1) % DESTINATIONS.length]; }
@@ -175,6 +176,41 @@
     let target;
     for (const e of g.enemies) if (e.hp > 0 && e.y < point.y && (!target || distance(e, point) < distance(target, point))) target = e;
     return target;
+  }
+  function flyDrone(d,x,y,speed,dt) {
+    const dx=x-d.x,dy=y-d.y,distance=Math.hypot(dx,dy)||1,desired=Math.min(speed,distance*6),blend=1-Math.exp(-dt*10);
+    d.vx+=(dx/distance*desired-d.vx)*blend;d.vy+=(dy/distance*desired-d.vy)*blend;
+    d.x+=d.vx*dt;d.y+=d.vy*dt;
+  }
+  function updateDrones(g,dt) {
+    for(const d of g.drones){
+      if(d.state==='docked'){
+        d.x=g.player.x+d.side*17;d.y=g.player.y+7;d.vx=g.player.vx;d.vy=g.player.vy;
+        if(g.time>=d.launchAt&&nearest(g,d)){d.state='outbound';d.sortie=0;d.fireIn=.12;g.events.push({type:'droneLaunch',x:d.x,y:d.y,id:d.id});}
+        continue;
+      }
+      if(d.state==='recharge'){
+        d.x=g.player.x+d.side*17;d.y=g.player.y+7;d.vx=g.player.vx;d.vy=g.player.vy;d.charge=Math.min(1,d.charge+dt/1.65);
+        if(d.charge>=1){d.state='docked';d.launchAt=g.time+.55;g.events.push({type:'droneReady',x:d.x,y:d.y,id:d.id});}
+        continue;
+      }
+      if(d.state==='return'){
+        const dockX=g.player.x+d.side*17,dockY=g.player.y+7,dist=Math.hypot(dockX-d.x,dockY-d.y);
+        if(dist<13){d.x=dockX;d.y=dockY;d.state='recharge';d.charge=0;d.vx=d.vy=0;g.events.push({type:'droneDock',x:d.x,y:d.y,id:d.id});}
+        else flyDrone(d,dockX,dockY,520,dt);
+        continue;
+      }
+      d.sortie+=dt;
+      const target=nearest(g,d);
+      if(!target||d.sortie>=3.6){d.state='return';g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});continue;}
+      const flankX=target.x+d.side*(target.r+24),flankY=target.y+Math.max(16,target.r*.8);
+      flyDrone(d,flankX,flankY,d.state==='outbound'?420:285,dt);
+      if(Math.hypot(target.x-d.x,target.y-d.y)<target.r+48)d.state='engage';
+      if(Math.hypot(target.x-d.x,target.y-d.y)<390){
+        d.fireIn-=dt;
+        if(d.fireIn<=0){const angle=Math.atan2(target.y-d.y,target.x-d.x),speed=690;g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2,life:1.1,kind:'drone',damage:1,pierce:1,hitEnemies:new Set()});d.fireIn=.36;g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id});}
+      }
+    }
   }
   function fire(g) {
     const target = nearestAhead(g, g.player);
@@ -358,6 +394,7 @@
     if (!bossActive && g.spawnIn <= 0) { spawn(g); g.spawnIn = Math.max(.35, 1.25 - g.wave * .055); }
     g.fireIn -= dt; if (g.fireIn <= 0) fire(g);
     g.missileIn = Math.max(0, g.missileIn - dt);
+    updateDrones(g,dt);
     for (const b of g.bullets) {
       if (b.homing) {
         const target = nearest(g, b);
