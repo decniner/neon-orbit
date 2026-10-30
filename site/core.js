@@ -15,6 +15,12 @@
     {name:'CINDER MATRIARCH',telegraph:'FLAME FAN INCOMING'},
     {name:'NIGHT SENTINEL',telegraph:'SEEKER PAIR INCOMING'}
   ];
+  const DOCTRINES = [
+    {id:'vanguard',name:'VANGUARD',icon:'✳',cost:0,description:'Balanced flight systems.'},
+    {id:'aegis',name:'AEGIS',icon:'◉',cost:25,description:'Start with a recharging shield.'},
+    {id:'cinder',name:'CINDER',icon:'✧',cost:35,description:'Start with +1 weapon damage.'},
+    {id:'sentinel',name:'SENTINEL',icon:'⌁',cost:35,description:'Start with an extra seeker.'}
+  ];
   const UPGRADES = {
     damage: {name:'Hot core',icon:'✧',tag:'OFFENSE',description:'+1 damage to every projectile.',cap:3},
     haste: {name:'Quick trigger',icon:'»',tag:'FIREPOWER',description:'Fire 15% faster. Every weapon.',cap:3},
@@ -68,7 +74,14 @@
     };
   }
   function destinationFor(stage) { return DESTINATIONS[(Math.max(1, Math.floor(stage)) - 1) % DESTINATIONS.length]; }
-  function start(g) { const random = g.random; Object.assign(g, createGame(random)); g.mode = 'playing'; g.invulnerable = 6; g.spawnIn = 2.5; g.supplyIn = 4; }
+  function start(g, doctrine = 'vanguard') {
+    const random = g.random; Object.assign(g, createGame(random)); g.mode = 'playing'; g.invulnerable = 6; g.spawnIn = 2.5; g.supplyIn = 4;
+    const selected=DOCTRINES.some(item=>item.id===doctrine)?doctrine:'vanguard';
+    if(selected==='aegis'){g.guardianCores.aegis=1;g.aegisShield=true;}
+    if(selected==='cinder'){g.guardianCores.cinder=1;g.damageBonus=1;}
+    if(selected==='sentinel')g.guardianCores.sentinel=1;
+  }
+  function salvageForRun(g) { return Math.min(99,18+Math.floor(g.kills/2)+g.bossesDefeated*12); }
   function togglePause(g) {
     if (g.mode === 'playing') g.mode = 'paused';
     else if (g.mode === 'paused') g.mode = 'playing';
@@ -424,6 +437,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, destinationFor, configureViewport, chooseUpgrade, createGame, start, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DOCTRINES, destinationFor, configureViewport, chooseUpgrade, createGame, start, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
