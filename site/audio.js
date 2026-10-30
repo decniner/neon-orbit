@@ -88,6 +88,8 @@
         this.hiss(.11,.018,1800,t);this.tone(720,.13,'triangle',.016,t,1120);
       } else if (type === 'droneFire') {
         this.tone(1480,.035,'square',.008,t,920);
+      } else if (type === 'droneIntercept') {
+        this.hiss(.09,.026,2600,t);this.tone(920,.075,'triangle',.025,t,420);this.tone(1540,.11,'sine',.018,t+.025,760);
       } else if (type === 'droneDock') {
         this.tone(930,.11,'sine',.014,t,1380);this.tone(1240,.12,'triangle',.009,t+.035);
       } else if (type === 'upgrade' || type === 'launch') {

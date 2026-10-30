@@ -196,8 +196,28 @@
     }
     return target;
   }
+  function droneProjectileTarget(g,d) {
+    let target,lowest=Infinity;
+    for(const projectile of g.enemyBullets){
+      if(projectile.life<=0||projectile.hp<=0)continue;
+      const dx=projectile.x-g.player.x,dy=projectile.y-g.player.y,range=Math.hypot(dx,dy)||1;
+      const rvx=projectile.vx-g.player.vx,rvy=projectile.vy-g.player.vy,closing=-(dx*rvx+dy*rvy)/range;
+      if(closing<35)continue;
+      const impactTime=Math.max(0,(range-g.player.r-(projectile.r||3)-8)/closing);
+      const dangerRadius=projectile.kind==='missile'||projectile.kind==='rocket'?320:235;
+      if(impactTime>1.45||range>dangerRadius)continue;
+      const score=impactTime*170+range*.12-(projectile.kind==='missile'||projectile.kind==='rocket'?52:0);
+      const covered=g.drones.some(other=>other!==d&&['outbound','engage'].includes(other.state)&&other.target?.projectile===projectile)?130:0;
+      if(score+covered<lowest){lowest=score+covered;target={kind:'projectile',projectile};}
+    }
+    return target;
+  }
+  function dronePriorityTarget(g,d) {
+    return droneProjectileTarget(g,d)||droneTarget(g,d);
+  }
   function droneNeedsDeploy(g,target) {
     if(!target)return false;
+    if(target.kind==='projectile')return true;
     const range=distance(target,g.player),canFire=target.y-target.r<=g.cameraY+(HEIGHT-520);
     const imminent=canFire&&Number.isFinite(target.fireIn)&&target.fireIn<.85;
     return range<=560||(imminent&&range<=780)||(target.kind==='boss'&&range<=680);
@@ -217,7 +237,7 @@
       if(d.state==='docked'){
         const phase=g.time*1.65+d.orbitPhase,orbitX=g.player.x+Math.cos(phase)*44,orbitY=g.player.y+Math.sin(phase)*27;
         flyDrone(d,orbitX,orbitY,220,dt);
-        const target=droneTarget(g,d);
+        const target=dronePriorityTarget(g,d);
         if(g.time>=d.launchAt&&droneNeedsDeploy(g,target)){d.target=target;d.state='outbound';d.sortie=0;d.retargetIn=.7;d.fireIn=.12;g.events.push({type:'droneLaunch',x:d.x,y:d.y,id:d.id});}
         continue;
       }
@@ -234,9 +254,15 @@
       }
       d.sortie+=dt;
       d.retargetIn=(d.retargetIn??0)-dt;
-      if(!d.target||d.target.hp<=0||d.retargetIn<=0){d.target=droneTarget(g,d);d.retargetIn=.7;}
+      if(!d.target||d.target.hp<=0||d.target.kind==='projectile'&&d.target.projectile.life<=0||d.retargetIn<=0){d.target=dronePriorityTarget(g,d);d.retargetIn=.18;}
       const target=d.target;
-      if(!target||d.sortie>=3.6){d.state='return';d.target=null;g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});continue;}
+      if(!target||target.kind!=='projectile'&&d.sortie>=3.6){d.state='return';d.target=null;g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});continue;}
+      if(target.kind==='projectile'){
+        const projectile=target.projectile;
+        flyDrone(d,projectile.x,projectile.y,620,dt);
+        if(distance(d,projectile)<(projectile.r||3)+11){projectile.life=0;projectile.hp=0;d.state='return';d.target=null;g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});}
+        continue;
+      }
       d.blockedLane=droneLaneBlocked(g,d,target);
       const flankX=target.x+d.side*(target.r+24+(d.blockedLane?48:0)),flankY=target.y+Math.max(16,target.r*.8);
       flyDrone(d,flankX,flankY,d.state==='outbound'?420:285,dt);
