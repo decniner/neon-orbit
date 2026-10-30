@@ -21,9 +21,7 @@
       this.echo = c.createDelay(.5); this.echo.delayTime.value = .24;
       const feedback = c.createGain(), wet = c.createGain(); feedback.gain.value = .2; wet.gain.value = .13;
       this.echo.connect(feedback); feedback.connect(this.echo); this.echo.connect(wet); wet.connect(this.musicBus);
-      this.noise = c.createBuffer(1, Math.floor(c.sampleRate * .25), c.sampleRate);
-      const data = this.noise.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      this.noiseBuffers = new Map();
       this.ready = true;
     }
     unlock() {
@@ -50,12 +48,14 @@
       this.voices++; o.onended = () => { this.voices--; o.disconnect(); a.disconnect(); };
       o.start(t); o.stop(t + duration + .025);
     }
-    hiss(duration = .08, volume = .025, frequency = 1800, when) {
+    hiss(duration = .08, volume = .025, frequency = 1800, when, bus = 'effectsBus') {
       if (!this.enabled || !this.ready || this.voices > 44) return;
       const c = this.context, t = when ?? c.currentTime, source = c.createBufferSource(), filter = c.createBiquadFilter(), gain = c.createGain();
-      source.buffer = this.noise; filter.type = 'highpass'; filter.frequency.value = frequency;
+      let noise = this.noiseBuffers.get(c.sampleRate);
+      if (!noise) { noise = c.createBuffer(1, Math.floor(c.sampleRate * .18), c.sampleRate); const data = noise.getChannelData(0); for (let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,1.6); this.noiseBuffers.set(c.sampleRate,noise); }
+      source.buffer = noise; filter.type = 'highpass'; filter.frequency.value = frequency;
       gain.gain.setValueAtTime(volume, t); gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
-      source.connect(filter); filter.connect(gain); gain.connect(this.effectsBus);
+      source.connect(filter); filter.connect(gain); gain.connect(this[bus]);
       this.voices++; source.onended = () => { this.voices--; source.disconnect(); filter.disconnect(); gain.disconnect(); };
       source.start(t); source.stop(t + duration);
     }
@@ -63,8 +63,11 @@
       if (!this.enabled || !this.ready) return;
       const t = this.context.currentTime;
       if (type === 'fire') {
-        this.tone(weapon === 'pulse' ? 260 : weapon === 'seeker' ? 340 : 690, .065, 'triangle', .018, t, 120);
-        if (weapon === 'pulse') this.hiss(.06, .012, 700, t);
+        const f=weapon==='pulse'?250:weapon==='seeker'?310:620;
+        this.tone(f,.09,'sawtooth',weapon==='pulse'?.03:.026,t,f*.42);
+        this.tone(f*2.03,.035,'triangle',.014,t);
+        if (weapon === 'pulse') this.hiss(.07, .02, 850, t);
+        else if(weapon==='seeker'){this.hiss(.1,.018,1300,t);this.tone(900,.11,'sine',.016,t,410);}
       } else if (type === 'kill') {
         this.hiss(.13, .045, 350, t); this.tone(110, .15, 'sine', .09, t, 35);
       } else if (type === 'hit') {
@@ -76,13 +79,18 @@
       } else if (type === 'missileWarning') {
         this.tone(1040, .095, 'square', .032, t); this.tone(780, .11, 'square', .026, t + .13);
       } else if (type === 'explosion') {
-        this.hiss(.38, .085, 180, t); this.tone(92, .42, 'sine', .12, t, 28);
+        this.hiss(.38, .095, 160, t); this.tone(82, .48, 'sine', .14, t, 25);this.tone(440,.13,'triangle',.035,t+.018,90);this.tone(1380,.055,'sine',.025,t);
       } else if (type === 'dash') {
         this.hiss(.18, .05, 1200, t); this.tone(140, .18, 'sine', .04, t, 520);
       } else if (type === 'upgrade' || type === 'launch') {
         for (const [i, f] of [330, 440, 660, 880].entries()) this.tone(f, .32, 'sine', .04, t + i * .075, undefined, true);
       } else if (type === 'boss') {
         this.tone(55, .8, 'triangle', .09, t, 45); this.tone(82.4, .7, 'sine', .06, t + .1, undefined, true);
+      } else if (type === 'shield') {
+        this.tone(760,.16,'sine',.045,t,1240);this.tone(1140,.24,'triangle',.026,t+.025,520);
+        this.hiss(.11,.016,3300,t);
+      } else if (type === 'pickup') {
+        this.tone(640,.1,'triangle',.022,t,860);this.tone(960,.16,'sine',.025,t+.055,1280);
       }
     }
     update(mode, boss = false) {
