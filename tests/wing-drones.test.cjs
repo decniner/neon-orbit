@@ -10,6 +10,17 @@ test('every run starts with a two-drone wing and staggered deployment', () => {
   assert.ok(game.drones[0].launchAt < game.drones[1].launchAt);
 });
 
+test('zero-time simulation steps keep enemy velocity finite for lead targeting', () => {
+  const game = core.createGame(() => 0.5);
+  core.start(game);
+  game.spawnIn = 100;
+  game.enemies.push({x:game.player.x,y:game.player.y-120,r:18,hp:10,maxHp:10,kind:'chaser',speed:20,fireIn:2});
+
+  core.step(game, 0);
+
+  assert.ok(game.enemies.every(enemy => Number.isFinite(enemy.vx) && Number.isFinite(enemy.vy)));
+});
+
 test('deployed drones autonomously target enemies and fire their own shots', () => {
   const game = core.createGame(() => 0.5);
   core.start(game);
@@ -28,6 +39,60 @@ test('deployed drones autonomously target enemies and fire their own shots', () 
   assert.ok(events.some(event => event.type === 'droneLaunch'));
   assert.ok(events.some(event => event.type === 'droneFire'));
   assert.ok(game.enemies[0].hp < 100, 'drone shots damage the selected target');
+});
+
+test('drones prioritize an enemy about to fire near the player', () => {
+  const game = core.createGame(() => 0.5);
+  core.start(game);
+  game.spawnIn = 100;
+  game.forwardSpeed = 0;
+  game.fireIn = 100;
+  const nearby = {x:game.player.x-70,y:game.player.y-130,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:5};
+  const imminent = {x:game.player.x+220,y:game.player.y-180,r:18,hp:100,maxHp:100,kind:'heavy',speed:0,fireIn:.1};
+  game.enemies.push(nearby,imminent);
+  game.drones[0].launchAt = 0;
+
+  core.step(game, 0.05);
+
+  assert.equal(game.drones[0].target, imminent);
+});
+
+test('the wing splits its attention across two available targets', () => {
+  const game = core.createGame(() => 0.5);
+  core.start(game);
+  game.spawnIn = 100;
+  game.forwardSpeed = 0;
+  game.fireIn = 100;
+  const left = {x:game.player.x-95,y:game.player.y-150,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:4};
+  const right = {x:game.player.x+95,y:game.player.y-150,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:4};
+  game.enemies.push(left,right);
+  for(const drone of game.drones)drone.launchAt=0;
+
+  core.step(game, 0.05);
+
+  assert.notEqual(game.drones[0].target,game.drones[1].target);
+  assert.ok([left,right].includes(game.drones[0].target));
+  assert.ok([left,right].includes(game.drones[1].target));
+});
+
+test('a drone sidesteps when another enemy blocks its firing lane', () => {
+  const game = core.createGame(() => 0.5);
+  core.start(game);
+  game.spawnIn = 100;
+  game.forwardSpeed = 0;
+  game.fireIn = 100;
+  const drone = game.drones[0];
+  drone.x = game.player.x+60;
+  drone.y = game.player.y-200;
+  drone.state = 'engage';
+  drone.target = {x:game.player.x,y:game.player.y-250,r:22,hp:100,maxHp:100,kind:'boss',speed:0,fireIn:4};
+  drone.retargetIn = 1;
+  game.enemies.push(drone.target,{x:game.player.x+30,y:game.player.y-225,r:16,hp:30,maxHp:30,kind:'chaser',speed:0,fireIn:4});
+
+  core.step(game, 0.05);
+
+  assert.equal(drone.blockedLane,true);
+  assert.ok(drone.vx<0,'the left drone moves out around the obstruction');
 });
 
 test('drones return to dock, recharge, and redeploy without creating extra drones', () => {
