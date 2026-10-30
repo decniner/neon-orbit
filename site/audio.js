@@ -107,21 +107,25 @@
         this.nextBeat = now + .04; this.beat = 0; this.musicCue = cue;
         if (cue === 'boss') this.effect('boss');
       }
-      this.musicBus.gain.setTargetAtTime(.34, now, .35);
+      this.musicBus.gain.setTargetAtTime(.38, now, .28);
       this.musicalMode = 'playing';
       const hz = n => 440 * Math.pow(2, (n - 69) / 12);
       while (this.nextBeat < now + .16) {
-        const t=this.nextBeat,beat=this.beat++,step=beat%32,bar=Math.floor(beat/32),key=[0,0,3,5][bar%4],rootNote=key+45;
-        const melody=[12,19,15,12,22,19,15,10,12,19,24,22,19,15,12,7,12,19,15,12,24,22,19,15,17,22,19,15,12,10,7,10];
+        const t=this.nextBeat,beat=this.beat++,step=beat%32,key=[0,0,3,5][Math.floor(beat/32)%4],rootNote=key+52;
+        const melody=[19,24,22,19,26,24,22,19,17,19,24,29,27,24,22,19,19,24,22,19,29,27,24,22,21,24,27,31,29,27,24,21];
         const bass=[0,0,7,0,5,0,7,0][step%8];
-        if(step%8===0)this.tone(hz(rootNote+bass),.42,'triangle',boss?.052:.038,t,hz(rootNote-7+bass),false,'musicBus');
+        if(step%8===0)this.tone(hz(rootNote+bass-7),.19,'triangle',boss?.052:.042,t,hz(rootNote+bass-14),false,'musicBus');
         if(step%4===0){
-          const chord=[rootNote+12,rootNote+16,rootNote+19];
-          for(let i=0;i<chord.length;i++)this.tone(hz(chord[i]),.68,i===0?'triangle':'sine',boss?.014:.012,t+i*.018,undefined,true,'musicBus');
+          const chord=[rootNote+12,rootNote+16,rootNote+19,rootNote+23];
+          for(let i=0;i<chord.length;i++)this.tone(hz(chord[i]),.72,i===0?'triangle':'sine',i===3?.006:boss?.014:.012,t+i*.014,undefined,true,'musicBus');
         }
-        if(step%2===0){const note=melody[step];this.tone(hz(rootNote+note),boss?.2:.24,'triangle',boss?.026:.023,t,undefined,true,'musicBus');}
-        if(step===4||step===12||step===20||step===28){this.tone(hz(rootNote+melody[(step+2)%32]+12),.14,'sine',boss?.017:.014,t+.06,undefined,true,'musicBus');}
-        if(boss&&(step===7||step===15||step===23||step===31))this.tone(hz(rootNote+7),.1,'square',.012,t,hz(rootNote-5));
+        if([0,3,4,7,8,11,12,15,16,19,20,23,24,27,28,31].includes(step)){
+          this.tone(hz(rootNote+melody[step]),boss?.18:.22,'triangle',boss?.029:.026,t,undefined,true,'musicBus');
+          if(step===0||step===8||step===20||step===28)this.tone(hz(rootNote+melody[step]+12),.16,'sine',.009,t+.025,undefined,true,'musicBus');
+        }
+        if(step%8===4){this.hiss(.065,boss?.022:.018,1750,t,'musicBus');this.tone(hz(rootNote+7),.11,'triangle',boss?.019:.015,t,hz(rootNote+2),false,'musicBus');}
+        else if(step%4===2)this.hiss(.022,boss?.012:.009,6200,t,'musicBus');
+        if(boss&&(step===6||step===14||step===22||step===30)){this.tone(hz(rootNote+7),.12,'square',.016,t,hz(rootNote+2));this.hiss(.035,.012,3000,t,'musicBus');}
         this.nextBeat+=.1875;
       }
     }
