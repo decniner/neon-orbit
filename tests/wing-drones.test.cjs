@@ -30,7 +30,7 @@ test('drones stay in orbit around distant enemies and launch when the fight reac
   game.spawnIn = 100;
   game.forwardSpeed = 0;
   game.fireIn = 100;
-  const enemy = {x:game.player.x,y:game.player.y-700,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:4};
+  const enemy = {x:game.player.x,y:game.player.y-900,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:4};
   game.enemies.push(enemy);
   game.drones[0].launchAt=0;
 
@@ -201,4 +201,15 @@ test('drones return to dock, recharge, and redeploy without creating extra drone
 
   assert.equal(drone.state, 'outbound');
   assert.equal(game.drones.length, 2);
+});
+
+test('drones launch at greater range and fire at double the previous cadence',()=>{
+  const game=core.createGame(()=>.5);core.start(game);game.spawnIn=100;game.forwardSpeed=0;game.fireIn=100;
+  const enemy={x:game.player.x,y:game.player.y-650,r:18,hp:100,maxHp:100,kind:'chaser',speed:0,fireIn:100};game.enemies.push(enemy);
+  const drone=game.drones[0];drone.launchAt=0;
+  core.step(game,.05);
+  assert.equal(drone.state,'outbound','the wing launches before enemies reach the ship');
+  drone.state='engage';drone.target=enemy;drone.x=enemy.x-30;drone.y=enemy.y-20;drone.retargetIn=1;drone.fireIn=0;
+  core.step(game,.01);
+  assert.ok(drone.fireIn<=.18,'weapon cooldown is half the original .36 second interval');
 });

@@ -43,7 +43,7 @@ body.mobile-edition{position:fixed;inset:0;min-height:0;min-height:100dvh;overfl
 .mobile-edition .menu .eyebrow{margin-bottom:14px;font-size:7px;letter-spacing:1.4px}
 .mobile-edition .menu h2{font-size:clamp(46px,13vw,65px);letter-spacing:-2px}
 .mobile-edition .menu-description{max-width:300px;margin:13px 0 17px;font-size:11px;line-height:1.65}
-.mobile-edition .menu .primary-button{width:100%;min-height:54px;padding:15px 18px}
+.mobile-edition .menu .primary-button{width:100%;min-height:54px;padding:15px 18px}.mobile-edition .menu .secondary-button{width:100%;margin-top:10px;text-align:center}
 .mobile-edition .menu-hint{margin:11px 0 0;font-size:8px;letter-spacing:.6px}
 .mobile-edition .install-note{margin:8px 0 0;color:#7e9697;font:8px/1.5 monospace;letter-spacing:.1px}
 .mobile-edition.playing .install-note,.mobile-edition.playing .orbit-caption{display:none}

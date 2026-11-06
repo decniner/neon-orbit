@@ -45,3 +45,6 @@
 .version-label{font:7px monospace;letter-spacing:.6px;color:#50656e;opacity:.78}
 
 .pilot-intro{max-width:520px;margin:0 0 15px;color:#b9cbc4;font-size:12px;line-height:1.65}
+
+.secondary-button{margin-top:9px;padding:8px 0;border:0;background:none;color:#82949b;text-align:left;font:8px monospace;letter-spacing:.7px}.secondary-button:hover{color:#dbe6e1}.secondary-button[hidden]{display:none}
+body[data-mode=over] .menu h2{font-size:54px}body[data-mode=over] .menu-description{margin:14px 0}

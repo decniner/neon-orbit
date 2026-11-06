@@ -72,7 +72,7 @@
       enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], vortices: [], events: [],
       score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], difficulty:'medium', time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
       kills: 0, combo: 0, comboUntil: 0, novaCharge: 0, dashCooldown: 0, dashTime: 0,
-      invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0, droneWeaponLevel:0,
+      invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0, droneWeaponLevel:0, continueUsed:false,
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
       heading: -Math.PI / 2, roll: 0, rollTime: 0, rollDirection: 1, rollHeld: false,
       gunAngle: -Math.PI / 2, gunSide: 1, gunFlash: 0, dashDirection: {x: 0, y: -1},
@@ -234,8 +234,8 @@
     if(!target)return false;
     if(target.kind==='projectile')return true;
     const range=distance(target,g.player),canFire=target.y-target.r<=g.cameraY+(HEIGHT-520);
-    const imminent=canFire&&Number.isFinite(target.fireIn)&&target.fireIn<.85;
-    return range<=560||(imminent&&range<=780)||(target.kind==='boss'&&range<=680);
+    const imminent=canFire&&Number.isFinite(target.fireIn)&&target.fireIn<1.1;
+    return range<=760||(imminent&&range<=980)||(target.kind==='boss'&&range<=900);
   }
   function droneLaneBlocked(g,d,target) {
     const dx=target.x-d.x,dy=target.y-d.y,length2=dx*dx+dy*dy||1;
@@ -272,24 +272,24 @@
       d.retargetIn=(d.retargetIn??0)-dt;
       if(!d.target||d.target.hp<=0||d.target.kind==='projectile'&&d.target.projectile.life<=0||d.retargetIn<=0){d.target=dronePriorityTarget(g,d);d.retargetIn=.18;}
       const target=d.target;
-      if(!target||target.kind!=='projectile'&&d.sortie>=3.6){d.state='return';d.target=null;g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});continue;}
+      if(!target||target.kind!=='projectile'&&d.sortie>=5.2){d.state='return';d.target=null;g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});continue;}
       if(target.kind==='projectile'){
         const projectile=target.projectile;
         const dist=distance(d,projectile);
         if(dist>285)flyDrone(d,projectile.x,projectile.y,620,dt);
         else{
           d.fireIn-=dt;
-          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.16*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;}
+          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.08*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;}
         }
         continue;
       }
       d.blockedLane=droneLaneBlocked(g,d,target);
       const flankX=target.x+d.side*(target.r+24+(d.blockedLane?48:0)),flankY=target.y+Math.max(16,target.r*.8);
-      flyDrone(d,flankX,flankY,d.state==='outbound'?420:285,dt);
+      flyDrone(d,flankX,flankY,d.state==='outbound'?520:340,dt);
       if(Math.hypot(target.x-d.x,target.y-d.y)<target.r+48)d.state='engage';
-      if(Math.hypot(target.x-d.x,target.y-d.y)<390){
+      if(Math.hypot(target.x-d.x,target.y-d.y)<520){
         d.fireIn-=dt;
-        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.fireIn=.36*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel});}
+        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.fireIn=.18*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel});}
       }
     }
   }
@@ -466,8 +466,16 @@
     if(g.aegisShield){g.aegisShield=false;g.aegisRecharge=Math.max(9,24-(g.guardianCores.aegis-1)*3);g.invulnerable=1.5;g.events.push({type:'shieldHit',x:g.player.x,y:g.player.y,recharge:g.aegisRecharge});return;}
     g.hp--; g.damageTaken++; g.invulnerable = 1.5;
     g.events.push({type: 'hit', x: g.player.x, y: g.player.y});
-    if (g.hp <= 0) { g.mode = 'over'; g.events.push({type: 'over'}); }
+    if (g.hp <= 0) { g.mode = 'over'; g.events.push({type: 'over',x:g.player.x,y:g.player.y}); }
   }
+  function continueRun(g) {
+    if(g.mode!=='over'||g.continueUsed)return false;
+    g.continueUsed=true;g.mode='playing';g.hp=1;g.player.x=WIDTH/2;g.player.y=g.cameraY;g.player.vx=0;g.player.vy=0;
+    g.enemyBullets.length=0;g.decoys.length=0;g.dashTime=0;g.dashCooldown=0;g.invulnerable=3;
+    for(const enemy of g.enemies){const dx=enemy.x-g.player.x,dy=enemy.y-g.player.y,distance=Math.hypot(dx,dy);if(distance<enemy.r+90){const angle=distance>0?Math.atan2(dy,dx):g.random()*Math.PI*2,range=enemy.r+100;enemy.x=clamp(g.player.x+Math.cos(angle)*range,CORRIDOR.left,CORRIDOR.right);enemy.y=g.player.y+Math.sin(angle)*range;}}
+    g.events=[{type:'continue',x:g.player.x,y:g.player.y}];return true;
+  }
+  function declineContinue(g) { if(g.mode!=='over'||g.continueUsed)return false;g.continueUsed=true;return true; }
   function step(g, delta, input = {}) {
     if (g.mode !== 'playing') return;
     const dt = clamp(Number.isFinite(delta) ? delta : 0, 0, .05);
@@ -601,6 +609,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, DOCTRINES, destinationFor, configureViewport, chooseUpgrade, createGame, start, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, DOCTRINES, destinationFor, configureViewport, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
