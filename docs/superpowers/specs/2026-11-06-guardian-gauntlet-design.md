@@ -34,6 +34,7 @@ The user selected richer boss encounters and specified that bosses must be ten t
 - Scale enemy hull and attack cadence by the selected difficulty. Replace the current Medium 2× hull with 1×; keep Easy below baseline and make Hard/Insane progressively tougher through both hull and faster attack tempo.
 - Keep the current clear telegraph before dangerous attacks. Attack patterns must leave a player with a plausible escape route, including at corridor edges.
 - Let the existing combat kit matter: drones continue intercepting dangerous shots, decoys can draw guided threats, and weapons remain effective throughout the fight.
+- Keep boss hit feedback localized to the illuminated core/armor; never flash the full rectangular sprite bounds.
 - On victory, preserve the current core rewards, stage progression, and no-pause flow.
 
 ## Performance and accessibility constraints

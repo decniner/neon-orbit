@@ -39,7 +39,7 @@
 <script>
 if("serviceWorker" in navigator){
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!['playing','paused'].includes(document.body.dataset.mode))location.reload();});
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=39",{scope:"./"}).then(registration=>registration.update()).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=40",{scope:"./"}).then(registration=>registration.update()).catch(()=>{}));
 }
 </script>
 </body></html>
