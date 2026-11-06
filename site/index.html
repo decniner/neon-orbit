@@ -5,7 +5,7 @@
 <meta name="description" content="NEON ORBIT — an atmospheric survival arcade. Find your rhythm, thread the chaos, and stay in orbit.">
 <title>NEON ORBIT — Mobile Flight</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23090e15'/%3E%3Cpath d='M32 10 50 49 32 40 14 49Z' fill='%238cf1d2'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css?v=63"><link rel="stylesheet" href="mobile.css?v=63"><script defer src="core.js?v=63"></script><script defer src="audio.js?v=63"></script><script defer src="voices.js?v=63"></script><script defer src="game.js?v=63"></script>
+<link rel="stylesheet" href="styles.css?v=64"><link rel="stylesheet" href="mobile.css?v=64"><script defer src="core.js?v=64"></script><script defer src="audio.js?v=64"></script><script defer src="voices.js?v=64"></script><script defer src="game.js?v=64"></script>
 </head>
 <body class="mobile-edition" data-edition="mobile">
 <div class="site-shell">
@@ -14,7 +14,7 @@
 <section class="intro"><div><p class="eyebrow"><span class="status-dot"></span> AN INFINITE LITTLE ESCAPE</p><h1>NEON <span>ORBIT</span><sup>™</sup></h1></div><div class="intro-note"><span class="tiny-orbit">◎</span><p>Find your rhythm.<br>Outlast the chaos.</p></div></section>
 <section class="game-shell" aria-label="Neon Orbit arcade game">
 
-<div class="arena" id="arena"><header class="header"><a class="brand" href="./index.html" aria-label="Neon Orbit home"><span class="brand-icon">✳</span> ORBIT<span class="brand-sub">ARCADE / 003</span></a><span class="version-label" aria-label="Game version 63; adaptive 60 FPS rendering">v63 · FPS GUARD</span><div class="header-right"><a class="mobile-edition-link" href="mobile/">Phone edition <span>↗</span></a><span class="desktop-note">BUILT FOR YOUR FLOW STATE</span><button id="helpButton" class="quiet-button">How to play <span>↗</span></button><button id="soundButton" class="sound-button" aria-label="Turn sound off" aria-pressed="true"><span id="soundIcon">♫</span><span id="soundLabel">Sound on</span></button><button id="voicesButton" class="sound-button voice-button" aria-label="Turn crew dialogue on" aria-pressed="false"><span id="voicesIcon">◌</span><span class="voice-label" id="voicesLabel">Voices off</span></button></div></header>
+<div class="arena" id="arena"><header class="header"><a class="brand" href="./index.html" aria-label="Neon Orbit home"><span class="brand-icon">✳</span> ORBIT<span class="brand-sub">ARCADE / 003</span></a><span class="version-label" aria-label="Game version 64; three-phase guardian combat with adaptive 60 FPS rendering">v64 · GUARDIAN PHASES</span><div class="header-right"><a class="mobile-edition-link" href="mobile/">Phone edition <span>↗</span></a><span class="desktop-note">BUILT FOR YOUR FLOW STATE</span><button id="helpButton" class="quiet-button">How to play <span>↗</span></button><button id="soundButton" class="sound-button" aria-label="Turn sound off" aria-pressed="true"><span id="soundIcon">♫</span><span id="soundLabel">Sound on</span></button><button id="voicesButton" class="sound-button voice-button" aria-label="Turn crew dialogue on" aria-pressed="false"><span id="voicesIcon">◌</span><span class="voice-label" id="voicesLabel">Voices off</span></button></div></header>
 <canvas id="game" data-asset-root="assets/" width="1000" height="650" aria-label="Fly between the left and right corridor rails. Use W or up to move forward, S or down to move backward, and A or D to steer sideways. Space dashes and deploys a decoy."></canvas><div class="hud"><div class="metric score-metric"><span class="metric-label">YOUR SCORE</span><strong id="score">000000</strong></div><div class="metric"><span class="metric-label">PERSONAL BEST <span class="gold">✧</span></span><strong id="best">000000</strong></div><div class="metric wave-metric"><span class="metric-label">STAGE</span><strong><span id="wave">01</span><span class="dim"> / ∞</span></strong></div><div class="metric hull-metric"><span class="metric-label">HULL INTEGRITY</span><div id="hull" aria-label="3 hull points"><i></i><i></i><i></i></div></div><div class="pilot-badge"><img src="assets/vega.webp" alt="Pilot Vega" width="42" height="42"><span><small>FLIGHT CREW</small><strong>VEGA</strong></span></div><button id="pauseButton" class="icon-button" aria-label="Pause game" disabled>Ⅱ</button></div>
 <button id="arenaPauseButton" class="arena-pause icon-button" aria-label="Pause flight">Ⅱ</button>
 <button id="exitFullscreenButton" class="fullscreen-exit" aria-label="Exit full screen">EXIT <span aria-hidden="true">⛶</span></button>
@@ -39,7 +39,7 @@
 <script>
 if("serviceWorker" in navigator){
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!['playing','paused'].includes(document.body.dataset.mode))location.reload();});
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=38",{scope:"./"}).then(registration=>registration.update()).catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=39",{scope:"./"}).then(registration=>registration.update()).catch(()=>{}));
 }
 </script>
 </body></html>

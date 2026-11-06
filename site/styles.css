@@ -48,3 +48,5 @@
 
 .secondary-button{margin-top:9px;padding:8px 0;border:0;background:none;color:#82949b;text-align:left;font:8px monospace;letter-spacing:.7px}.secondary-button:hover{color:#dbe6e1}.secondary-button[hidden]{display:none}
 body[data-mode=over] .menu h2{font-size:54px}body[data-mode=over] .menu-description{margin:14px 0}
+
+.boss-hud{width:min(380px,76%)}.boss-hud[data-phase="2"] .boss-health i{background:#f19a79;box-shadow:0 0 13px #f19a7977}.boss-hud[data-phase="3"] .boss-health i{background:#ff4d5e;box-shadow:0 0 16px #ff4d5e99}.boss-hud[data-phase="3"]>div:first-child span:first-child{color:#ff747b}.announcement.guardian-phase{color:#ff918b;text-shadow:0 0 18px #ff454d88;animation:guardian-phase-in .42s ease-out}@keyframes guardian-phase-in{from{opacity:.3;filter:brightness(1.8)}to{opacity:1;filter:brightness(1)}}@media(max-width:760px){.boss-hud{width:82%}}@media(prefers-reduced-motion:reduce){.announcement.guardian-phase{animation:none}}

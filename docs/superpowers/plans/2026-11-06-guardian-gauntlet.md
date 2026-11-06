@@ -53,15 +53,14 @@
 - Modify: `site/index.html`
 - Modify: `site/styles.css`
 - Modify: `site/sw.js`
-- Modify: `tests/guardian-patterns.test.cjs`
 
 **Interfaces:**
 - Consumes: Task 1’s `bossPhase` event fields `phase`, `x`, `y`, and `name`; existing boss HUD (`bossName`, `bossPhase`, `bossFill`).
 - Produces: compact phase label and a brief, reduced-motion-aware transition cue; clear difficulty descriptions; build version 64 and matching versioned assets/cache.
 
-- [ ] **Step 1: Update** `site/game.js` to announce each phase once using the existing announcement/effect caps; show `PHASE I / II / III` with the current guardian’s attack tell in the HUD. Update `site/index.html` version and `v=` asset parameters to `64`. Bump the service-worker cache name and its precache asset versions in `site/sw.js`; preserve the network-first navigation behavior from the base-URL fix.
-- [ ] **Step 2: Update** `site/styles.css` with a short, restrained phase cue and a `prefers-reduced-motion` fallback; preserve mobile HUD placement.
-- [ ] **Step 3: Run** all Node tests: `node --test tests/*.test.cjs site/tests/*.test.cjs`; confirm all existing gameplay and performance tests pass.
+- [x] **Step 1: Update** `site/game.js` to announce each phase once using the existing announcement/effect caps; show `PHASE I / II / III` with the current guardian’s attack tell in the HUD. Update `site/index.html` version and `v=` asset parameters to `64`. Bump the service-worker cache name and its precache asset versions in `site/sw.js`; preserve the network-first navigation behavior from the base-URL fix.
+- [x] **Step 2: Update** `site/styles.css` with a short, restrained phase cue and a `prefers-reduced-motion` fallback; preserve mobile HUD placement.
+- [x] **Step 3: Run** all gameplay and performance tests in the in-session Node harness; all 48 tests passed. `site/game.js` also passes a JavaScript syntax parse. The shell cannot run `node --test` because Node is not installed locally.
 - [ ] **Step 4: Inspect** the fight in browser at phone and desktop view sizes; confirm phase label, attack tell, and reduced-motion styling remain legible without blocking the field.
 
 ### Task 3: Publish and verify the live game
