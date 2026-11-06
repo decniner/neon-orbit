@@ -6,7 +6,7 @@ body.mobile-edition{position:fixed;inset:0;min-height:0;min-height:100dvh;overfl
 .mobile-edition .site-shell,.mobile-edition main,.mobile-edition .game-shell{width:100%;max-width:none;height:100%;height:100dvh;margin:0;padding:0}
 .mobile-edition .header{position:absolute;z-index:8;top:var(--safe-top);left:0;right:0;height:42px;padding:0 14px;border:0;background:linear-gradient(180deg,#07111bea,#07111b00);pointer-events:none}
 .mobile-edition .header .brand,.mobile-edition .desktop-note,.mobile-edition .mobile-edition-link{display:none}
-.mobile-edition .header-right{width:100%;height:100%;justify-content:flex-end;gap:7px;pointer-events:auto}
+.mobile-edition .header-right{width:100%;height:100%;justify-content:flex-end;gap:7px;pointer-events:auto}.mobile-edition .version-label{position:absolute;left:17px;top:calc(100% + 60px);z-index:9}
 .mobile-edition .header-right .quiet-button,.mobile-edition .header-right .sound-button{height:33px;padding:0 10px;border:1px solid #617a7766;border-radius:18px;background:#09141bd9;font:9px monospace;letter-spacing:.4px}
 .mobile-edition .header-right .quiet-button{font-size:0}.mobile-edition .header-right .quiet-button span{font-size:16px}
 .mobile-edition .header-right .sound-button>span:first-child{font-size:13px}.mobile-edition .header-right .sound-button #soundLabel{display:inline;font-size:8px}
@@ -26,7 +26,7 @@ body.mobile-edition{position:fixed;inset:0;min-height:0;min-height:100dvh;overfl
 @keyframes threat-pulse{from{opacity:.72}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.mobile-edition .threat-warning{animation:none}}
 .mobile-edition .combo{top:calc(var(--safe-top) + 186px);font-size:9px}
-.mobile-edition .arena-bottom{z-index:3;left:17px;right:17px;bottom:calc(var(--safe-bottom) + 168px);font-size:7px}.mobile-edition .version-label{font-size:6px}
+.mobile-edition .arena-bottom{z-index:3;left:17px;right:17px;bottom:calc(var(--safe-bottom) + 168px);font-size:7px}
 .mobile-edition .touch-controls{z-index:5;left:22px;right:22px;bottom:calc(var(--safe-bottom) + 34px);display:flex;align-items:flex-end;pointer-events:none}
 .mobile-edition .joystick{width:118px;height:118px;border-color:#9af1d14d;background:#9af1d10c;box-shadow:inset 0 0 20px #9af1d10b;touch-action:none}
 .mobile-edition .joystick:after{content:"MOVE";position:absolute;inset:auto 0 13px;text-align:center;color:#9af1d188;font:7px monospace;letter-spacing:1.4px;pointer-events:none}

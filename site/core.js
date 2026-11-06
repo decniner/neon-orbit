@@ -37,6 +37,19 @@
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  function createRenderGovernor() { return {level:0,recent:Array(30).fill(1/60),cursor:0,count:0,slow:0,stable:0}; }
+  function updateRenderGovernor(governor,frameSeconds) {
+    if(!governor||!Number.isFinite(frameSeconds)||frameSeconds<=0||frameSeconds>.1)return false;
+    governor.recent[governor.cursor]=frameSeconds;governor.cursor=(governor.cursor+1)%governor.recent.length;governor.count=Math.min(governor.recent.length,governor.count+1);
+    if(governor.count<governor.recent.length)return false;
+    let total=0;for(const sample of governor.recent)total+=sample;const average=total/governor.recent.length;
+    if(average>.019){governor.slow+=frameSeconds;governor.stable=0;}
+    else if(average<.0175){governor.stable+=frameSeconds;governor.slow=Math.max(0,governor.slow-frameSeconds*2);}
+    else{governor.slow=Math.max(0,governor.slow-frameSeconds);governor.stable=0;}
+    if(governor.slow>=.75&&governor.level<2){governor.level++;governor.slow=0;governor.stable=0;return true;}
+    if(governor.stable>=4&&governor.level>0){governor.level--;governor.slow=0;governor.stable=0;return true;}
+    return false;
+  }
   function incomingMissileThreat(g, range = 240, warningTime = 1.25) {
     let threat = null;
     for (const missile of g.enemyBullets) {
@@ -609,6 +622,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, DOCTRINES, destinationFor, configureViewport, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
