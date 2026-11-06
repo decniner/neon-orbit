@@ -7,6 +7,7 @@ Make each stage-ending guardian feel dramatically more demanding and memorable, 
 ## Goals
 
 - Turn each guardian into a multi-phase duel with distinct identity and escalating pressure.
+- Make the selected difficulty matter across regular enemies and guardians: Medium is the balanced baseline, Easy is gentler, and Hard/Insane add hull and attack tempo in distinct steps.
 - Reward reading telegraphs, positioning, and using the existing dash, decoys, drones, and weapon upgrades.
 - Keep attack lanes legible and provide enough warning to dodge even during late phases.
 - Bound projectile, particle, and animation work so the existing render governor can preserve frame pacing.
@@ -15,7 +16,7 @@ Make each stage-ending guardian feel dramatically more demanding and memorable, 
 
 - Add new dependencies, online features, or a new game mode.
 - Increase challenge by multiplying health alone or filling the screen with unavoidable projectiles.
-- Change ordinary enemy balance or the controls.
+- Change controls or existing boss rewards.
 
 ## Approaches
 
@@ -30,6 +31,7 @@ The user selected richer boss encounters and specified that bosses must be ten t
 - Preserve the three guardians: Aegis Warden, Cinder Matriarch, and Night Sentinel.
 - Add a third phase to every fight. Phase transitions become explicit gameplay events and receive a distinct short visual/audio cue.
 - Phase one teaches the guardian’s signature pattern; phase two accelerates and varies it; phase three combines patterns with tighter but still dodgeable timing.
+- Scale enemy hull and attack cadence by the selected difficulty. Replace the current Medium 2× hull with 1×; keep Easy below baseline and make Hard/Insane progressively tougher through both hull and faster attack tempo.
 - Keep the current clear telegraph before dangerous attacks. Attack patterns must leave a player with a plausible escape route, including at corridor edges.
 - Let the existing combat kit matter: drones continue intercepting dangerous shots, decoys can draw guided threats, and weapons remain effective throughout the fight.
 - On victory, preserve the current core rewards, stage progression, and no-pause flow.
@@ -44,6 +46,6 @@ The user selected richer boss encounters and specified that bosses must be ten t
 
 ## Open implementation choices
 
-- Tune phase health thresholds and attack intervals against current difficulty settings, with a bounded attack budget and generous final-phase telegraph floor.
+- Use phase thresholds at 70% and 35% remaining health; scale attack recovery by selected difficulty, with a bounded attack budget and at least 0.8 seconds of final-phase warning.
 - Keep HUD changes compact: show guardian phase and its current telegraph without covering the playfield.
 - Increment the visible game version and asset/cache version together for release.

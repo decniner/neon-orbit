@@ -16,10 +16,10 @@
     {name:'NIGHT SENTINEL',telegraph:'SEEKER PAIR INCOMING'}
   ];
   const DIFFICULTIES = [
-    {id:'easy',name:'EASY',multiplier:1,description:'1× enemy hull · relaxed flight'},
-    {id:'medium',name:'MEDIUM',multiplier:2,description:'2× enemy hull · balanced challenge'},
-    {id:'hard',name:'HARD',multiplier:3,description:'3× enemy hull · punishing combat'},
-    {id:'insane',name:'INSANE',multiplier:4,description:'4× enemy hull · no room for error'}
+    {id:'easy',name:'EASY',multiplier:.75,attackIntensity:.70,description:'0.75× hull · slower attacks'},
+    {id:'medium',name:'MEDIUM',multiplier:1,attackIntensity:.85,description:'Standard hull · balanced attacks'},
+    {id:'hard',name:'HARD',multiplier:1.5,attackIntensity:1.15,description:'1.5× hull · faster attacks'},
+    {id:'insane',name:'INSANE',multiplier:2.25,attackIntensity:1.45,description:'2.25× hull · relentless attacks'}
   ];
   const DOCTRINES = [
     {id:'vanguard',name:'VANGUARD',icon:'✳',cost:0,description:'Balanced flight systems.'},
@@ -37,6 +37,9 @@
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const difficultyFor = g => DIFFICULTIES.find(item=>item.id===g.difficulty)||DIFFICULTIES[1];
+  const attackRecovery = (g, seconds) => seconds / difficultyFor(g).attackIntensity;
+  function bossPhase(e) { const healthRatio=e.maxHp>0?e.hp/e.maxHp:0;return healthRatio<=.35?3:healthRatio<=.70?2:1; }
   function createRenderGovernor() { return {level:0,recent:Array(30).fill(1/60),cursor:0,count:0,slow:0,stable:0}; }
   function updateRenderGovernor(governor,frameSeconds) {
     if(!governor||!Number.isFinite(frameSeconds)||frameSeconds<=0||frameSeconds>.1)return false;
@@ -170,8 +173,7 @@
       : g.wave >= 2 && roll < .25 ? 'interceptor' : 'chaser';
     const heavy = kind === 'heavy';
     const baseHp=({chaser:4,interceptor:6,sentry:8,heavy:14})[kind]+Math.floor((g.wave-1)/4);
-    const multiplier=DIFFICULTIES.find(item=>item.id===g.difficulty)?.multiplier||2;
-    const hp=baseHp*multiplier;
+    const hp=Math.ceil(baseHp*difficultyFor(g).multiplier);
     g.enemies.push({x, y, kind, heavy, age: 0, fireIn: .85, maxHp: hp,
       r: heavy ? 21 : kind === 'sentry' ? 17 : 14,
       hp,
@@ -179,9 +181,8 @@
   }
   function spawnBoss(g) {
     g.bossCountdown = 0;
-    const multiplier=DIFFICULTIES.find(item=>item.id===g.difficulty)?.multiplier||2;
-    const hp = (38 + g.stage * 4)*multiplier;
-    g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', stage:g.stage, destination:g.destination, speed: 35, fireIn: 2.8, age: 0});
+    const hp = Math.ceil((38 + g.stage * 4)*difficultyFor(g).multiplier);
+    g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', phase:1, stage:g.stage, destination:g.destination, speed: 35, fireIn: attackRecovery(g,2.8), age: 0});
     g.bossSpawnedStage = g.stage;
     g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination});
   }
@@ -416,6 +417,9 @@
     if (e.kind === 'boss') {
       e.x += (g.player.x + Math.sin(e.age * .55) * WIDTH * .215 - e.x) * dt * .7;
       e.y += (g.player.y - 250 + Math.sin(e.age * .8) * 45 - e.y) * dt * .7;
+      const phase=bossPhase(e);
+      if(!Number.isFinite(e.phase))e.phase=1;
+      if(phase>e.phase){e.phase=phase;g.events.push({type:'bossPhase',phase,x:e.x,y:e.y,name:e.destination?.boss||'GUARDIAN'});}
     } else if (e.kind === 'sentry') {
       const d = distance(e, g.player), direction = d > 330 ? 1 : d < 220 ? -1 : 0;
       e.x += (Math.cos(a) * direction + Math.sin(a) * .35) * e.speed * dt;
@@ -430,28 +434,27 @@
       e.fireIn = (e.fireIn ?? 2.6) - dt;
       if (e.fireIn <= 0) {
         if (e.kind === 'boss') {
-          const phaseTwo = e.hp < e.maxHp / 2;
+          const phase = e.phase||bossPhase(e), phaseTwo = phase >= 2, phaseThree = phase >= 3;
           const attack = (Math.max(1, Math.floor(e.stage || g.stage)) - 1) % BOSS_ATTACKS.length;
           if (attack === 0) {
-            const count = phaseTwo ? 20 : 14;
-            for (let i = 0; i < count; i++) hostileShot(g, e, i * Math.PI * 2 / count + e.age * (phaseTwo ? .42 : .25), phaseTwo ? 205 : 175);
+            if(!phaseTwo){for(let i=0;i<14;i++)hostileShot(g,e,i*Math.PI*2/14+e.age*.25,175);}
+            else if(!phaseThree){for(let i=0;i<20;i++)hostileShot(g,e,i*Math.PI*2/20+e.age*.42,205);for(const offset of [-.11,0,.11])hostileShot(g,e,fireAngle+offset,238);}
+            else{for(let i=0;i<24;i++){if(i>=10&&i<=13)continue;hostileShot(g,e,i*Math.PI*2/24+e.age*.55,222);}for(const offset of [-.08,0,.08])hostileShot(g,e,fireAngle+offset,265);}
           } else if (attack === 1) {
-            const count = phaseTwo ? 11 : 7;
-            const spread = phaseTwo ? .72 : .48;
-            for (let i = 0; i < count; i++) hostileShot(g, e, fireAngle - spread / 2 + spread * i / (count - 1), phaseTwo ? 235 : 195);
+            const count=phaseThree?13:phaseTwo?11:7,spread=phaseThree?.9:phaseTwo?.72:.48,speed=phaseThree?265:phaseTwo?235:195;
+            for(let i=0;i<count;i++)hostileShot(g,e,fireAngle-spread/2+spread*i/(count-1),speed);
+            if(phaseThree)for(const offset of [-.16,0,.16])hostileShot(g,e,fireAngle+offset,292);
           } else {
-            hostileMissile(g, e, fireAngle - .12, 'missile');
-            hostileMissile(g, e, fireAngle + .12, 'missile');
-            if (phaseTwo) {
-              hostileMissile(g, e, fireAngle, 'missile');
-              for (let i = 0; i < 8; i++) hostileShot(g, e, i * Math.PI / 4 + e.age * .3, 185);
-            }
+            const missileCount=phaseThree?5:phaseTwo?3:2;
+            for(let i=0;i<missileCount;i++)hostileMissile(g,e,fireAngle+(i-(missileCount-1)/2)*.12,'missile');
+            if(phaseTwo){for(let i=0;i<8;i++)hostileShot(g,e,i*Math.PI/4+e.age*.3,185);}
+            if(phaseThree){for(let i=0;i<14;i++){if(i===6||i===7)continue;hostileShot(g,e,i*Math.PI*2/14+e.age*.42,218);}}
           }
-          e.fireIn = phaseTwo ? 1.7 : 2.5;
-        } else if(e.kind==='interceptor') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=2.8;}
-        else if(e.kind==='sentry') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=3.1;}
-        else if(e.kind==='heavy') {hostileMissile(g,e,fireAngle,'rocket');e.fireIn=2.35;}
-        else {for(const spread of [-.045,.045])hostileShot(g,e,fireAngle+spread,320);e.fireIn=1.35;}
+          e.fireIn = attackRecovery(g,phase===1?2.5:phase===2?1.7:1.2);
+        } else if(e.kind==='interceptor') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=attackRecovery(g,2.8);}
+        else if(e.kind==='sentry') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=attackRecovery(g,3.1);}
+        else if(e.kind==='heavy') {hostileMissile(g,e,fireAngle,'rocket');e.fireIn=attackRecovery(g,2.35);}
+        else {for(const spread of [-.045,.045])hostileShot(g,e,fireAngle+spread,320);e.fireIn=attackRecovery(g,1.35);}
       }
     }
     const invDt=dt>0?1/dt:0;e.vx=(e.x-oldX)*invDt;e.vy=(e.y-oldY)*invDt;

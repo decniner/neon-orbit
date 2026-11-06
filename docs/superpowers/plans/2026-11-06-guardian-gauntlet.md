@@ -15,7 +15,8 @@
 - Keep simulation deterministic and independent of rendering frame rate.
 - Respect the existing hostile-projectile cap of 300; do not add unbounded effects.
 - Keep attack lanes legible and ensure dangerous attacks have a plausible escape route.
-- Do not add dependencies or change ordinary enemy balance, controls, or boss rewards.
+- Difficulty tuning: Easy uses 0.75× hull and 0.70× attack intensity; Medium uses 1.00× hull and 0.85× attack intensity; Hard uses 1.50× hull and 1.15× attack intensity; Insane uses 2.25× hull and 1.45× attack intensity. Attack intervals equal their phase/enemy base interval divided by attack intensity.
+- Do not add dependencies or change controls or boss rewards.
 - Update the visible build and service-worker asset/cache versions together.
 
 ## Review Focus
@@ -25,6 +26,7 @@
 - The final phase must still expose a readable telegraph long enough to react.
 - Boss defeat during any phase must award exactly the existing core/rewards and clear hostile shots.
 - No boss must fire after it leaves the active play area or after defeat.
+- Medium must use baseline enemy/guardian hull and slower pressure than Hard/Insane; each selected mode must retain its own hull and attack-tempo values.
 
 ---
 
@@ -33,15 +35,16 @@
 **Files:**
 - Modify: `site/core.js`
 - Modify: `tests/guardian-patterns.test.cjs`
+- Modify: `tests/difficulty-selection.test.cjs`
 
 **Interfaces:**
 - Consumes: existing `BOSS_ATTACKS`, `moveEnemy`, `hostileShot`, `hostileMissile`, and `defeat` flow.
 - Produces: internal `bossPhase(e)` returning `1 | 2 | 3`; phase transition events `{type:'bossPhase', phase, x, y, name}`.
 
-- [ ] **Step 1: Add failing tests** for exact phase boundaries (phase II at 70% remaining HP, phase III at 35%), one transition event per phase change, all three signature attack families in phase III, and the 300-hostile-shot cap.
-- [ ] **Step 2: Run** `node --test tests/guardian-patterns.test.cjs`; confirm new assertions fail against current two-phase behavior.
-- [ ] **Step 3: Implement** `bossPhase(e)` and three-phase, guardian-specific attack schedules in `site/core.js`. Use current signature attacks in phase one (2.5-second recovery), vary them in phase two (1.7-second recovery), and combine patterns in phase three (1.2-second recovery). Keep each shot emission behind the existing `hostileShot` / `hostileMissile` cap, leave an escape lane in each final pattern, and provide a minimum 0.8-second final-phase tell before attacks. Emit the transition event once when the phase advances.
-- [ ] **Step 4: Run** `node --test tests/guardian-patterns.test.cjs tests/guardian-cores.test.cjs`; confirm phase logic passes and core rewards remain unchanged.
+- [x] **Step 1: Add failing tests** for exact phase boundaries (phase II at 70% remaining HP, phase III at 35%), one transition event per phase change, all three signature attack families in phase III, and the 300-hostile-shot cap. Update difficulty tests to assert Easy/Medium/Hard/Insane enemy HP `3/4/6/9`, stage-one guardian HP `32/42/63/95`, hull multipliers `.75/1/1.5/2.25`, and attack-intensity values `.70/.85/1.15/1.45`.
+- [x] **Step 2: Run** the guardian and difficulty tests in the in-session Node harness. The shell has no local Node executable, so the planned `node --test` command cannot run; the added tests were executed directly in Node and failed first for the expected missing three-phase/difficulty behavior.
+- [x] **Step 3: Implement** the difficulty values in `DIFFICULTIES`, apply hull multipliers when spawning regular enemies and bosses, and divide all enemy/boss attack recovery by the selected attack intensity. Implement `bossPhase(e)` and three-phase, guardian-specific attack schedules in `site/core.js`: phase base recoveries are 2.5, 1.7, and 1.2 seconds. Keep each shot emission behind the existing cap, leave an escape lane in each final pattern, and provide at least 0.8 seconds of final-phase tell before attacks. Emit the transition event once when the phase advances.
+- [x] **Step 4: Run** the guardian, difficulty, and core-reward tests in the in-session Node harness; all 9 passed. The full 48-test suite also passed after the simulation change.
 
 ### Task 2: Clear phase transitions and attack readout
 
@@ -54,7 +57,7 @@
 
 **Interfaces:**
 - Consumes: Task 1’s `bossPhase` event fields `phase`, `x`, `y`, and `name`; existing boss HUD (`bossName`, `bossPhase`, `bossFill`).
-- Produces: compact phase label and a brief, reduced-motion-aware transition cue; build version 64 and matching versioned assets/cache.
+- Produces: compact phase label and a brief, reduced-motion-aware transition cue; clear difficulty descriptions; build version 64 and matching versioned assets/cache.
 
 - [ ] **Step 1: Update** `site/game.js` to announce each phase once using the existing announcement/effect caps; show `PHASE I / II / III` with the current guardian’s attack tell in the HUD. Update `site/index.html` version and `v=` asset parameters to `64`. Bump the service-worker cache name and its precache asset versions in `site/sw.js`; preserve the network-first navigation behavior from the base-URL fix.
 - [ ] **Step 2: Update** `site/styles.css` with a short, restrained phase cue and a `prefers-reduced-motion` fallback; preserve mobile HUD placement.
@@ -73,7 +76,7 @@
 
 ## Plan self-review
 
-- Spec coverage: all three guardians gain a third phase; each fight escalates with distinct patterns; HUD tells and transition cues improve readability; projectile/effect work is bounded; controls and rewards stay intact; the live build is verified.
-- Review-focus cases: phase threshold/event behavior and projectile caps belong to Task 1; transition details and mobile/reduced-motion behavior are covered in Task 2; reward regressions are checked with `guardian-cores.test.cjs`; deployment/cache behavior is checked at the exact base URL in Task 3.
+- Spec coverage: all three guardians gain a third phase; each fight escalates with distinct patterns; difficulty tiers scale hull and attack cadence; HUD tells and transition cues improve readability; projectile/effect work is bounded; controls and rewards stay intact; the live build is verified.
+- Review-focus cases: phase threshold/event behavior, difficulty tuning, and projectile caps belong to Task 1; transition details and mobile/reduced-motion behavior are covered in Task 2; reward regressions are checked with `guardian-cores.test.cjs`; deployment/cache behavior is checked at the exact base URL in Task 3.
 - Dependency and interface check: Task 1 emits `bossPhase` fields `phase`, `x`, `y`, `name`; Task 2 consumes these exact names. Task 2 produces the versioned assets required by Task 3.
 - Proportion: three tasks are split at independently reviewable simulation, presentation, and release boundaries.
