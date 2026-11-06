@@ -15,6 +15,12 @@
     {name:'CINDER MATRIARCH',telegraph:'FLAME FAN INCOMING'},
     {name:'NIGHT SENTINEL',telegraph:'SEEKER PAIR INCOMING'}
   ];
+  const DIFFICULTIES = [
+    {id:'easy',name:'EASY',multiplier:1,description:'1× enemy hull · relaxed flight'},
+    {id:'medium',name:'MEDIUM',multiplier:2,description:'2× enemy hull · balanced challenge'},
+    {id:'hard',name:'HARD',multiplier:3,description:'3× enemy hull · punishing combat'},
+    {id:'insane',name:'INSANE',multiplier:4,description:'4× enemy hull · no room for error'}
+  ];
   const DOCTRINES = [
     {id:'vanguard',name:'VANGUARD',icon:'✳',cost:0,description:'Balanced flight systems.'},
     {id:'aegis',name:'AEGIS',icon:'◉',cost:25,description:'Start with a recharging shield.'},
@@ -64,7 +70,7 @@
     return {
       random, mode: 'ready', player: {x: WIDTH / 2, y: HEIGHT / 2, r: 12, vx: 0, vy: 0}, cameraY: HEIGHT / 2,
       enemies: [], bullets: [], enemyBullets: [], pickups: [], decoys: [], vortices: [], events: [],
-      score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
+      score: 0, hp: 3, maxHp: 3, level: 1, xp: 0, xpNeeded: 8, choices: [], upgrades: {}, damageBonus: 0, fireRate: 1, magnetRange: 115, dashMaxCooldown: 3, peakCombo: 0, bossesDefeated: 0, guardianCores:{aegis:0,cinder:0,sentinel:0}, aegisShield:false, aegisRecharge:0, damageTaken: 0, wave: 1, stage: 1, stageTime: 0, stageDuration: 42, forwardSpeed: 95, destination: DESTINATIONS[0], difficulty:'medium', time: 0, sectorDelay: 0, bossSpawnedStage: 0, bossCountdown: 0,
       kills: 0, combo: 0, comboUntil: 0, novaCharge: 0, dashCooldown: 0, dashTime: 0,
       invulnerable: 0, spawnIn: 1, fireIn: 0, weaponTime: 0, droneWeaponLevel:0,
       weaponKind: 'triple', supplyIn: 6, supplies: 0,
@@ -75,8 +81,9 @@
     };
   }
   function destinationFor(stage) { return DESTINATIONS[(Math.max(1, Math.floor(stage)) - 1) % DESTINATIONS.length]; }
-  function start(g, doctrine = 'vanguard') {
+  function start(g, doctrine = 'vanguard', difficulty = 'medium') {
     const random = g.random; Object.assign(g, createGame(random)); g.mode = 'playing'; g.invulnerable = 6; g.spawnIn = 2.5; g.supplyIn = 4;
+    g.difficulty=DIFFICULTIES.some(item=>item.id===difficulty)?difficulty:'medium';
     const selected=DOCTRINES.some(item=>item.id===doctrine)?doctrine:'vanguard';
     if(selected==='aegis'){g.guardianCores.aegis=1;g.aegisShield=true;}
     if(selected==='cinder'){g.guardianCores.cinder=1;g.damageBonus=1;}
@@ -149,7 +156,9 @@
       : g.wave >= 3 && roll >= .25 && roll < .43 ? 'sentry'
       : g.wave >= 2 && roll < .25 ? 'interceptor' : 'chaser';
     const heavy = kind === 'heavy';
-    const hp = ({chaser:4, interceptor:6, sentry:8, heavy:14})[kind] + Math.floor((g.wave - 1) / 4);
+    const baseHp=({chaser:4,interceptor:6,sentry:8,heavy:14})[kind]+Math.floor((g.wave-1)/4);
+    const multiplier=DIFFICULTIES.find(item=>item.id===g.difficulty)?.multiplier||2;
+    const hp=baseHp*multiplier;
     g.enemies.push({x, y, kind, heavy, age: 0, fireIn: .85, maxHp: hp,
       r: heavy ? 21 : kind === 'sentry' ? 17 : 14,
       hp,
@@ -157,7 +166,8 @@
   }
   function spawnBoss(g) {
     g.bossCountdown = 0;
-    const hp = 38 + g.stage * 4;
+    const multiplier=DIFFICULTIES.find(item=>item.id===g.difficulty)?.multiplier||2;
+    const hp = (38 + g.stage * 4)*multiplier;
     g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', stage:g.stage, destination:g.destination, speed: 35, fireIn: 2.8, age: 0});
     g.bossSpawnedStage = g.stage;
     g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination});
@@ -591,6 +601,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DOCTRINES, destinationFor, configureViewport, chooseUpgrade, createGame, start, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, DOCTRINES, destinationFor, configureViewport, chooseUpgrade, createGame, start, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
