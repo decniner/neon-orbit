@@ -146,7 +146,16 @@ function circle(x,y,r,color,width=1){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
 function ship(x,y,angle,scale=1,alpha=1,roll=0){
  const image=art.wayfarer,w=62,h=77;
  ctx.save();ctx.translate(x,y);ctx.rotate(angle+Math.PI/2);ctx.scale(scale*activeVisualScale,scale*activeVisualScale);ctx.transform(Math.cos(roll),Math.sin(roll)*.92,0,1,0,0);ctx.globalAlpha=alpha;
- const power=Math.max(enginePower,g.mode==='ready'?.23:g.mode==='playing'?.48:0,g.dashTime>0?1.2:0);if(power>.06){const pulse=.9+Math.sin(clock*24)*.1;ctx.globalAlpha=alpha;for(const nozzle of [-9,9]){const length=7+power*12*pulse;ctx.fillStyle='#ff5369aa';ctx.beginPath();ctx.moveTo(nozzle-3,17);ctx.lineTo(nozzle-1,17+length);ctx.lineTo(nozzle+1,17+length);ctx.lineTo(nozzle+3,17);ctx.closePath();ctx.fill();}}
+ const power=Math.max(enginePower,g.mode==='ready'?.28:0);if(power>.06){
+  for(let i=0;i<2;i++){
+   const nozzle=i===0?-5.5:5.5,pulse=.94+.06*Math.sin(clock*24+i*1.7),length=(11+power*28)*pulse,flare=2.8+power*2.2,originY=32;
+   ctx.globalAlpha=alpha*(.82+power*.18);ctx.shadowBlur=0;
+   const outer=ctx.createLinearGradient(0,originY,0,originY+length);outer.addColorStop(0,'rgba(255,247,210,.95)');outer.addColorStop(.14,'rgba(255,193,113,.94)');outer.addColorStop(.53,'rgba(255,92,70,.68)');outer.addColorStop(1,'rgba(255,67,75,0)');ctx.fillStyle=outer;
+   ctx.beginPath();ctx.moveTo(nozzle-1.8,originY);ctx.quadraticCurveTo(nozzle-flare,originY+length*.34,nozzle-flare*.8,originY+length*.65);ctx.quadraticCurveTo(nozzle-.6,originY+length,nozzle,originY+length);ctx.quadraticCurveTo(nozzle+.6,originY+length,nozzle+flare*.8,originY+length*.65);ctx.quadraticCurveTo(nozzle+flare,originY+length*.34,nozzle+1.8,originY);ctx.closePath();ctx.fill();
+   const coreLength=length*.72,coreGradient=ctx.createLinearGradient(0,originY,0,originY+coreLength);coreGradient.addColorStop(0,'rgba(255,255,239,.98)');coreGradient.addColorStop(.26,'rgba(194,255,241,.96)');coreGradient.addColorStop(.72,'rgba(122,230,255,.68)');coreGradient.addColorStop(1,'rgba(112,220,255,0)');ctx.fillStyle=coreGradient;
+   ctx.beginPath();ctx.moveTo(nozzle-.85,originY);ctx.quadraticCurveTo(nozzle-1.6,originY+coreLength*.42,nozzle,originY+coreLength);ctx.quadraticCurveTo(nozzle+1.6,originY+coreLength*.42,nozzle+.85,originY);ctx.closePath();ctx.fill();
+  }
+ }
  if(image.complete&&image.naturalWidth){ctx.drawImage(image,-w/2,-h/2,w,h);if(g.hp<g.maxHp){ctx.strokeStyle='#ad7560b5';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(10,-2);ctx.lineTo(13,1);ctx.lineTo(11,4);if(g.hp<g.maxHp-1){ctx.moveTo(-12,6);ctx.lineTo(-10,9);ctx.lineTo(-13,12);}ctx.stroke();}}
  else{ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(12,13);ctx.lineTo(0,7);ctx.lineTo(-12,13);ctx.closePath();ctx.fillStyle='#b8f9dd';ctx.fill();ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(5,7);ctx.lineTo(0,3);ctx.lineTo(-5,7);ctx.closePath();ctx.fillStyle='#20483f';ctx.fill();}shipEvolution();ctx.restore();
  ctx.save();ctx.translate(x,y);ctx.rotate(angle+Math.PI/2);ctx.scale(activeVisualScale,activeVisualScale);ctx.globalAlpha=alpha;
@@ -319,7 +328,7 @@ function frame(t){
       shake*=Math.exp(-dt*16);
       if(!reduced&&particles.length<particleLimit&&Math.hypot(steering.x,steering.y)>.05){const a=g.heading+Math.PI;particles.push({x:g.player.x+Math.cos(a)*11,y:g.player.y+Math.sin(a)*11,vx:Math.cos(a)*45+(Math.random()-.5)*20,vy:Math.sin(a)*45+(Math.random()-.5)*20,life:.28,max:.35,color:g.weaponTime>0?weaponInfo[g.weaponKind].color:'#9af1d1',size:2});}
     }
-    const wanted=g.mode==='playing'?Math.max(.45,Math.min(1,Math.hypot(steering.x,Math.min(0,steering.y)))):0;enginePower+=(wanted-enginePower)*(1-Math.exp(-dt*7));const turn=Math.atan2(Math.sin(g.heading-flightHeading),Math.cos(g.heading-flightHeading));flightHeading+=turn*(1-Math.exp(-dt*15));soundEngine.update(g.mode,g.enemies.some(e=>e.kind==='boss'));draw(dt);hudAccumulator+=dt;if(hudAccumulator>=1/24){hudAccumulator%=1/24;hud();}
+    const wanted=C.exhaustIntensity(g.mode,Math.max(0,-steering.y),g.dashTime);enginePower+=(wanted-enginePower)*(1-Math.exp(-dt*7));const turn=Math.atan2(Math.sin(g.heading-flightHeading),Math.cos(g.heading-flightHeading));flightHeading+=turn*(1-Math.exp(-dt*15));soundEngine.update(g.mode,g.enemies.some(e=>e.kind==='boss'));draw(dt);hudAccumulator+=dt;if(hudAccumulator>=1/24){hudAccumulator%=1/24;hud();}
   }
   requestAnimationFrame(frame);
 }

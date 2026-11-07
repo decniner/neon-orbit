@@ -27,6 +27,7 @@
     {id:'tiny',name:'TINY',scale:.62}
   ];
   const visualSizeScale = size => VISUAL_SIZES.find(item=>item.id===size)?.scale||1;
+  const exhaustIntensity = (mode, forwardThrust = 0, dashTime = 0) => mode === 'ready' ? .28 : mode !== 'playing' ? 0 : dashTime > 0 ? 1.35 : .42 + clamp(forwardThrust, 0, 1) * .58;
   const DOCTRINES = [
     {id:'vanguard',name:'VANGUARD',icon:'✳',cost:0,description:'Balanced flight systems.'},
     {id:'aegis',name:'AEGIS',icon:'◉',cost:25,description:'Start with a recharging shield.'},
@@ -631,6 +632,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, VISUAL_SIZES, visualSizeScale, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
