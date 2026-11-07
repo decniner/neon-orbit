@@ -16,10 +16,10 @@
     {name:'NIGHT SENTINEL',telegraph:'SEEKER PAIR INCOMING'}
   ];
   const DIFFICULTIES = [
-    {id:'easy',name:'EASY',multiplier:.75,attackIntensity:.70,description:'0.75× hull · slower attacks'},
-    {id:'medium',name:'MEDIUM',multiplier:1,attackIntensity:.85,description:'Standard hull · balanced attacks'},
-    {id:'hard',name:'HARD',multiplier:1.5,attackIntensity:1.15,description:'1.5× hull · faster attacks'},
-    {id:'insane',name:'INSANE',multiplier:2.25,attackIntensity:1.45,description:'2.25× hull · relentless attacks'}
+    {id:'easy',name:'EASY',multiplier:.75,attackIntensity:.50,description:'0.75× hull · generous attack windows'},
+    {id:'medium',name:'MEDIUM',multiplier:1,attackIntensity:.65,description:'Standard hull · room to react and recover'},
+    {id:'hard',name:'HARD',multiplier:1.5,attackIntensity:.90,description:'1.5× hull · faster, denser attacks'},
+    {id:'insane',name:'INSANE',multiplier:2.25,attackIntensity:1.25,description:'2.25× hull · relentless attacks'}
   ];
   const VISUAL_SIZES = [
     {id:'normal',name:'NORMAL',scale:1},

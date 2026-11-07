@@ -31,7 +31,7 @@ function firstGuardianAttackRecovery(difficulty, healthRatio=1){
 }
 
 test('Medium is the balanced baseline and every mode scales hull and attack tempo distinctly',()=>{
-  const choices=[['easy',3,32,.75,.70],['medium',4,42,1,.85],['hard',6,63,1.5,1.15],['insane',9,95,2.25,1.45]];
+  const choices=[['easy',3,32,.75,.50],['medium',4,42,1,.65],['hard',6,63,1.5,.90],['insane',9,95,2.25,1.25]];
   for(const [difficulty,enemyHp,bossHp,hullMultiplier,attackIntensity] of choices){
     assert.equal(spawnedEnemyHealth(difficulty),enemyHp,`${difficulty} regular enemy health`);
     assert.equal(spawnedBossHealth(difficulty),bossHp,`${difficulty} guardian health`);
