@@ -4,19 +4,21 @@ const path = require('node:path');
 const test = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'game.js'), 'utf8');
-const shipStart = source.indexOf('function ship(');
-const shipEnd = source.indexOf('\nfunction shipEvolution(', shipStart);
-const ship = source.slice(shipStart, shipEnd);
-const depthStart = source.indexOf('function drawShipDepth(');
-const depthEnd = source.indexOf('\nfunction shipEvolution(', depthStart);
-const depth = source.slice(depthStart, depthEnd);
 
-test('player ship render adds a compact cast shadow and metal depth highlights', () => {
-  assert.ok(shipStart >= 0 && shipEnd > shipStart, 'player ship renderer is present');
-  assert.ok(depthStart >= 0 && depthEnd > depthStart, 'player ship depth pass is present');
-  assert.ok(ship.indexOf('drawImage(image') < ship.indexOf('drawShipDepth('), 'depth details are layered over the rendered hull');
-  assert.match(ship, /shadowOffsetY=/, 'the hull casts a grounded shadow');
-  assert.match(depth, /globalCompositeOperation='screen'/, 'metal highlights use additive light');
-  assert.match(depth, /quadraticCurveTo\(/, 'curved canopy glass receives a specular highlight');
-  assert.match(depth, /stroke\(\)/, 'armor bevel seams are visibly drawn');
+test('player ship uses a high-resolution transparent volumetric render', () => {
+  const imagePath = path.join(__dirname, '..', 'assets', 'wayfarer-volumetric.png');
+  const image = fs.readFileSync(imagePath);
+  assert.match(source, /wayfarer-volumetric\.png/, 'player renderer loads the volumetric art');
+  assert.equal(image.toString('ascii', 1, 4), 'PNG', 'ship art is a PNG asset');
+  assert.equal(image.readUInt32BE(16), 1182, 'sprite preserves detailed horizontal resolution');
+  assert.equal(image.readUInt32BE(20), 1330, 'sprite preserves detailed vertical resolution');
+  assert.equal(image[25], 6, 'sprite retains an alpha channel for clean compositing');
+  assert.doesNotMatch(source, /function drawShipDepth\(/, 'volume comes from the 3D ship asset itself');
+});
+
+test('the game and offline cache use the volumetric ship artwork', () => {
+  const game = fs.readFileSync(path.join(__dirname, '..', 'game.js'), 'utf8');
+  const serviceWorker = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  assert.match(game, /wayfarer-volumetric\.png/, 'player sprite points to the raised 3D artwork');
+  assert.match(serviceWorker, /assets\/wayfarer-volumetric\.png/, 'offline play caches the new player sprite');
 });

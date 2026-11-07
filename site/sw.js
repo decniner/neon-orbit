@@ -1,8 +1,8 @@
-const CACHE = 'neon-orbit-mobile-v42';
+const CACHE = 'neon-orbit-mobile-v43';
 const FILES = [
-  './', './index.html', './mobile.css?v=66', './manifest.webmanifest',
-  './styles.css?v=66', './core.js?v=66', './game.js?v=66', './audio.js?v=66', './voices.js?v=66',
-  './assets/vega.webp', './assets/wayfarer.webp', './assets/sentinel.webp',
+  './', './index.html', './mobile.css?v=67', './manifest.webmanifest',
+  './styles.css?v=67', './core.js?v=67', './game.js?v=67', './audio.js?v=67', './voices.js?v=67',
+  './assets/vega.webp', './assets/wayfarer.webp', './assets/wayfarer-volumetric.png', './assets/sentinel.webp',
   './assets/interceptor.webp', './assets/sentry.webp', './assets/heavy.webp',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'
 ];
