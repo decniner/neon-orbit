@@ -21,6 +21,12 @@
     {id:'hard',name:'HARD',multiplier:1.5,attackIntensity:1.15,description:'1.5× hull · faster attacks'},
     {id:'insane',name:'INSANE',multiplier:2.25,attackIntensity:1.45,description:'2.25× hull · relentless attacks'}
   ];
+  const VISUAL_SIZES = [
+    {id:'normal',name:'NORMAL',scale:1},
+    {id:'small',name:'SMALL',scale:.8},
+    {id:'tiny',name:'TINY',scale:.62}
+  ];
+  const visualSizeScale = size => VISUAL_SIZES.find(item=>item.id===size)?.scale||1;
   const DOCTRINES = [
     {id:'vanguard',name:'VANGUARD',icon:'✳',cost:0,description:'Balanced flight systems.'},
     {id:'aegis',name:'AEGIS',icon:'◉',cost:25,description:'Start with a recharging shield.'},
@@ -625,6 +631,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, VISUAL_SIZES, visualSizeScale, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

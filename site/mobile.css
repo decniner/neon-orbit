@@ -63,3 +63,5 @@ body.mobile-edition{position:fixed;inset:0;min-height:0;min-height:100dvh;overfl
 @media(display-mode:fullscreen){.mobile-edition .fullscreen-exit{display:flex}}
 @media(display-mode:fullscreen),(display-mode:standalone){.mobile-edition .game-bottom>.quiet-button{display:none}}
 .mobile-edition .difficulty-select{margin:7px 0 8px}.mobile-edition .difficulty-heading{font-size:6px;letter-spacing:.8px;margin-bottom:5px}.mobile-edition .difficulty-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.mobile-edition .difficulty-card{min-height:41px;padding:6px 7px;gap:3px}.mobile-edition .difficulty-card strong{font-size:7px}.mobile-edition .difficulty-card small{font-size:5.5px}.mobile-edition .menu-content{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
+
+.mobile-edition .visual-size-select{margin:0 0 7px}.mobile-edition .visual-size-select .difficulty-heading{font-size:6px;letter-spacing:.8px;margin-bottom:4px}.mobile-edition .visual-size-grid{gap:5px}.mobile-edition .visual-size-button{min-height:30px;padding:5px 7px;font-size:7px}
