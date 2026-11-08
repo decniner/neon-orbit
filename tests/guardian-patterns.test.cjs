@@ -8,7 +8,7 @@ function fireGuardian(stage, healthRatio = 1, difficulty = 'medium', initialShot
   game.spawnIn = 100;
   game.stageTime = 0;
   game.fireIn = 100;
-  const maxHp = (38 + stage * 4) * core.BOSS_TOUGHNESS * (core.DIFFICULTIES.find(item => item.id === difficulty)?.multiplier || 1);
+  const maxHp = (38 + stage * 4) * core.BOSS_TOUGHNESS * (core.DIFFICULTIES.find(item => item.id === difficulty)?.bossMultiplier || 1);
   const boss = {x:500,y:180,r:44,hp:maxHp*healthRatio,maxHp,kind:'boss',phase:1,stage,destination:core.destinationFor(stage),speed:0,fireIn:.01,age:2};
   game.enemies.push(boss);
   for (let i = 0; i < initialShots; i++) game.enemyBullets.push({x:80,y:70,vx:0,vy:0,r:2,life:5,kind:'gun'});
@@ -17,21 +17,22 @@ function fireGuardian(stage, healthRatio = 1, difficulty = 'medium', initialShot
 }
 
 test('each guardian has a distinct, readable attack telegraph', () => {
-  assert.deepEqual(core.BOSS_ATTACKS.map(attack => attack.telegraph), ['LANCE RING INCOMING','FLAME FAN INCOMING','SEEKER PAIR INCOMING']);
+  assert.equal(new Set(core.BOSS_ATTACKS.map(attack => attack.telegraph)).size,6);
+  assert.deepEqual(core.BOSS_ATTACKS.map(attack => attack.id), ['lance-halo','cinder-fan','seeker-salvo','gravity-minefield','rift-lance-grid','null-spiral']);
 });
 
 test('guardians escalate their signature attacks across all three phases', () => {
   const aegis = fireGuardian(1);
   const cinder = fireGuardian(2);
   const sentinel = fireGuardian(3);
-  assert.equal(aegis.enemyBullets.filter(b => b.kind === 'gun').length, 14);
+  assert.equal(aegis.enemyBullets.filter(b => b.kind === 'gun').length, 13,'the first halo leaves a visible dodge gap');
   assert.equal(cinder.enemyBullets.filter(b => b.kind === 'gun').length, 7);
   assert.equal(sentinel.enemyBullets.filter(b => b.kind === 'missile').length, 2);
 
   const aegisTwo = fireGuardian(1,.6);
   const cinderTwo = fireGuardian(2,.6);
   const sentinelTwo = fireGuardian(3,.6);
-  assert.equal(aegisTwo.enemyBullets.filter(b => b.kind === 'gun').length, 23);
+  assert.equal(aegisTwo.enemyBullets.filter(b => b.kind === 'gun').length, 19,'the second halo grows but preserves its gap');
   assert.equal(cinderTwo.enemyBullets.filter(b => b.kind === 'gun').length, 11);
   assert.equal(sentinelTwo.enemyBullets.filter(b => b.kind === 'missile').length, 3);
   assert.ok(sentinelTwo.enemyBullets.filter(b => b.kind === 'gun').length > 0);
@@ -73,4 +74,17 @@ test('guardian phase changes begin at 70% and 35% health and emit once', () => {
 test('hostile projectiles remain capped at 300 during the final guardian phase', () => {
   const game = fireGuardian(3,.3,'insane',295);
   assert.equal(game.enemyBullets.length,300);
+});
+
+test('later stages deploy their own mine, lance, and spiral weapons with phase escalation',()=>{
+  const mines=fireGuardian(4),minesFinal=fireGuardian(4,.3);
+  const lances=fireGuardian(5),lancesFinal=fireGuardian(5,.3);
+  const spiral=fireGuardian(6),spiralFinal=fireGuardian(6,.3);
+  assert.ok(mines.enemyBullets.some(b=>b.kind==='mine'));
+  assert.ok(minesFinal.enemyBullets.filter(b=>b.kind==='mine').length>mines.enemyBullets.filter(b=>b.kind==='mine').length);
+  assert.ok(lances.enemyBullets.some(b=>b.kind==='lance'));
+  assert.ok(lancesFinal.enemyBullets.filter(b=>b.kind==='lance').length>lances.enemyBullets.filter(b=>b.kind==='lance').length);
+  assert.ok(spiral.enemyBullets.filter(b=>b.kind==='gun').length>0);
+  assert.ok(spiralFinal.enemyBullets.filter(b=>b.kind==='gun').length>spiral.enemyBullets.filter(b=>b.kind==='gun').length);
+  for(const game of [mines,minesFinal,lances,lancesFinal,spiral,spiralFinal])assert.ok(game.events.some(e=>e.type==='bossWeapon'));
 });

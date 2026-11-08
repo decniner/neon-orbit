@@ -5,23 +5,41 @@
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
   const ENEMY_TOUGHNESS = 1.5;
-  const BOSS_TOUGHNESS = 4;
+  const BOSS_TOUGHNESS = 6;
   const WEAPONS = ['triple', 'vortex', 'eclipse', 'pulse', 'seeker', 'nova', 'arc'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
     {name:'ASHEN NEBULA',boss:'CINDER MATRIARCH',color:'#efae86'},
     {name:'VOID CITADEL',boss:'NIGHT SENTINEL',color:'#c6a4ff'}
   ];
+  const ALIEN_FLEETS = [
+    {id:'razor-manta', hue:'#ff5268', form:0},
+    {id:'hooked-brood', hue:'#ff8b59', form:1},
+    {id:'many-eyed', hue:'#d874ff', form:2},
+    {id:'bone-crowned', hue:'#e9dd72', form:3},
+    {id:'rift-stalker', hue:'#65e8c8', form:4},
+    {id:'void-leviathan', hue:'#ff4da8', form:5}
+  ];
+  function enemyDesignForStage(stage) {
+    const n = Math.max(1, Math.floor(Number(stage) || 1));
+    const fleet = ALIEN_FLEETS[(n - 1) % ALIEN_FLEETS.length];
+    const generation=Math.floor((n - 1) / ALIEN_FLEETS.length);
+    const hue=generation?`hsl(${([350,18,275,53,164,330][fleet.form]+generation*23)%360} 88% 64%)`:fleet.hue;
+    return {id:fleet.id, hue, form:fleet.form, stage:n, generation, severity:n};
+  }
   const BOSS_ATTACKS = [
-    {name:'AEGIS WARDEN',telegraph:'LANCE RING INCOMING'},
-    {name:'CINDER MATRIARCH',telegraph:'FLAME FAN INCOMING'},
-    {name:'NIGHT SENTINEL',telegraph:'SEEKER PAIR INCOMING'}
+    {id:'lance-halo',name:'AEGIS WARDEN',telegraph:'WARD HALO / FIND THE GAP',color:'#9af1d1'},
+    {id:'cinder-fan',name:'CINDER MATRIARCH',telegraph:'FURNACE FAN / BREAK ANGLE',color:'#ff874f'},
+    {id:'seeker-salvo',name:'NIGHT SENTINEL',telegraph:'SEEKER SALVO / DECOY OR DASH',color:'#c6a4ff'},
+    {id:'gravity-minefield',name:'BROOD ARCHON',telegraph:'GRAVITY MINEFIELD / MOVE THROUGH SEAMS',color:'#ff547d'},
+    {id:'rift-lance-grid',name:'RIFT EXECUTOR',telegraph:'RIFT LANCE GRID / BREAK THE LINE',color:'#ff554b'},
+    {id:'null-spiral',name:'VOID LEVIATHAN',telegraph:'NULL SPIRAL / FIND THE QUIET ARC',color:'#ff48bd'}
   ];
   const DIFFICULTIES = [
-    {id:'easy',name:'EASY',multiplier:.75,attackIntensity:.50,description:'0.75× hull · generous attack windows'},
-    {id:'medium',name:'MEDIUM',multiplier:1,attackIntensity:.65,description:'Standard hull · room to react and recover'},
-    {id:'hard',name:'HARD',multiplier:1.5,attackIntensity:.90,description:'1.5× hull · faster, denser attacks'},
-    {id:'insane',name:'INSANE',multiplier:2.25,attackIntensity:1.25,description:'2.25× hull · relentless attacks'}
+    {id:'easy',name:'EASY',multiplier:.75,bossMultiplier:.68,attackIntensity:.50,description:'0.75× hull · generous attack windows'},
+    {id:'medium',name:'MEDIUM',multiplier:1,bossMultiplier:1,attackIntensity:.65,description:'Standard hull · room to react and recover'},
+    {id:'hard',name:'HARD',multiplier:1.5,bossMultiplier:1.5,attackIntensity:.90,description:'1.5× hull · faster, denser attacks'},
+    {id:'insane',name:'INSANE',multiplier:2.25,bossMultiplier:2.25,attackIntensity:1.25,description:'2.25× hull · relentless attacks'}
   ];
   const VISUAL_SIZES = [
     {id:'normal',name:'NORMAL',scale:1},
@@ -65,13 +83,13 @@
   function incomingMissileThreat(g, range = 240, warningTime = 1.25) {
     let threat = null;
     for (const missile of g.enemyBullets) {
-      if ((missile.kind !== 'missile' && missile.kind !== 'rocket') || missile.life <= 0) continue;
+      if (!['missile','rocket','mine','lance'].includes(missile.kind) || missile.life <= 0) continue;
       const dx = missile.x - g.player.x, dy = missile.y - g.player.y;
       const d = Math.hypot(dx, dy);
       if (d > range || d === 0) continue;
       const relativeVx = missile.vx - g.player.vx, relativeVy = missile.vy - g.player.vy;
       const closingSpeed = -(dx * relativeVx + dy * relativeVy) / d;
-      if (closingSpeed < 60) continue;
+      if (closingSpeed < (missile.kind==='missile'||missile.kind==='rocket'?60:35)) continue;
       const timeToImpact = Math.max(0, (d - g.player.r - missile.r - 10) / closingSpeed);
       if (timeToImpact > warningTime || (threat && timeToImpact >= threat.timeToImpact)) continue;
       const angle = (Math.atan2(dy, dx) + Math.PI * 2) % (Math.PI * 2);
@@ -183,17 +201,18 @@
     const heavy = kind === 'heavy';
     const baseHp=({chaser:4,interceptor:6,sentry:8,heavy:14})[kind]+Math.floor((g.wave-1)/4);
     const hp=Math.ceil(baseHp*ENEMY_TOUGHNESS*difficultyFor(g).multiplier);
-    g.enemies.push({x, y, kind, heavy, age: 0, fireIn: .85, maxHp: hp,
+    g.enemies.push({x, y, kind, heavy, stage:g.stage, destination:g.destination, age: 0, fireIn: .85, maxHp: hp,
       r: heavy ? 21 : kind === 'sentry' ? 17 : 14,
       hp,
       speed: (heavy ? 45 : kind === 'interceptor' ? 125 : 65) + Math.min(g.wave, 25) * 3});
   }
   function spawnBoss(g) {
     g.bossCountdown = 0;
-    const hp = Math.ceil((38 + g.stage * 4)*BOSS_TOUGHNESS*difficultyFor(g).multiplier);
-    g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', phase:1, stage:g.stage, destination:g.destination, speed: 35, fireIn: attackRecovery(g,2.8), age: 0});
+    const hp = Math.ceil((38 + g.stage * 4)*BOSS_TOUGHNESS*difficultyFor(g).bossMultiplier);
+    const attack = BOSS_ATTACKS[(g.stage-1)%BOSS_ATTACKS.length];
+    g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', name:attack.name, phase:1, stage:g.stage, destination:g.destination, speed: 35, fireIn: attackRecovery(g,2.8), age: 0});
     g.bossSpawnedStage = g.stage;
-    g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination});
+    g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination, name:attack.name});
   }
   function supply(g) {
     let x = g.supplies === 0 ? g.player.x : clamp(g.player.x + (g.random() - .5) * WIDTH * .8, CORRIDOR.left, CORRIDOR.right);
@@ -364,17 +383,22 @@
     g.events.push({type: 'fire', weaponKind: kind, overdrive, x:g.player.x, y:g.player.y, angle:a, side});
     if(overdrive)g.events.push({type:'novaOverdrive',x:g.player.x,y:g.player.y});
   }
-  function hostileShot(g, e, angle, speed = 300) {
+  function hostileShot(g, e, angle, speed = 300, kind = 'gun', color) {
     if (g.enemyBullets.length >= 300) return;
     g.enemyBullets.push({x: e.x + Math.cos(angle) * (e.r + 7), y: e.y + Math.sin(angle) * (e.r + 7),
-      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, r: 5, life: 5, kind:'gun', damage:1, boss: e.kind === 'boss'});
-    g.events.push({type:'enemyFire',kind:'gun',x:e.x,y:e.y,angle});
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, r:5, life:kind==='lance'?4:5, kind, damage:kind==='lance'?2:1, color, boss: e.kind === 'boss'});
+    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle,boss:e.kind==='boss'});
   }
-  function hostileMissile(g,e,angle,kind='missile') {
+  function hostileMine(g,e,angle,speed,color){
+    if(g.enemyBullets.length>=300)return;
+    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+12),y:e.y+Math.sin(angle)*(e.r+12),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:10,life:7,kind:'mine',damage:1,color,boss:true});
+    g.events.push({type:'enemyFire',kind:'mine',x:e.x,y:e.y,angle,boss:true});
+  }
+  function hostileMissile(g,e,angle,kind='missile',color) {
     if (g.enemyBullets.length >= 300) return;
     const speed=kind==='rocket'?180:210;
-    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+9),y:e.y+Math.sin(angle)*(e.r+9),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:kind==='rocket'?8:6,life:6,kind,turnRate:kind==='rocket'?1.7:2.8,damage:kind==='rocket'?2:1,trailIn:0});
-    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle});
+    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+9),y:e.y+Math.sin(angle)*(e.r+9),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:kind==='rocket'?8:6,life:6,kind,turnRate:kind==='rocket'?1.7:2.8,damage:kind==='rocket'?2:1,trailIn:0,color,boss:e.kind==='boss'});
+    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle,boss:e.kind==='boss'});
   }
   function detonate(g,b,x,y,source) {
     if (b.exploded) return;
@@ -428,7 +452,7 @@
       e.y += (g.player.y - 250 + Math.sin(e.age * .8) * 45 - e.y) * dt * .7;
       const phase=bossPhase(e);
       if(!Number.isFinite(e.phase))e.phase=1;
-      if(phase>e.phase){e.phase=phase;g.events.push({type:'bossPhase',phase,x:e.x,y:e.y,name:e.destination?.boss||'GUARDIAN'});}
+      if(phase>e.phase){e.phase=phase;g.events.push({type:'bossPhase',phase,x:e.x,y:e.y,name:e.name||e.destination?.boss||'GUARDIAN'});}
     } else if (e.kind === 'sentry') {
       const d = distance(e, g.player), direction = d > 330 ? 1 : d < 220 ? -1 : 0;
       e.x += (Math.cos(a) * direction + Math.sin(a) * .35) * e.speed * dt;
@@ -444,21 +468,31 @@
       if (e.fireIn <= 0) {
         if (e.kind === 'boss') {
           const phase = e.phase||bossPhase(e), phaseTwo = phase >= 2, phaseThree = phase >= 3;
-          const attack = (Math.max(1, Math.floor(e.stage || g.stage)) - 1) % BOSS_ATTACKS.length;
-          if (attack === 0) {
-            if(!phaseTwo){for(let i=0;i<14;i++)hostileShot(g,e,i*Math.PI*2/14+e.age*.25,175);}
-            else if(!phaseThree){for(let i=0;i<20;i++)hostileShot(g,e,i*Math.PI*2/20+e.age*.42,205);for(const offset of [-.11,0,.11])hostileShot(g,e,fireAngle+offset,238);}
-            else{for(let i=0;i<24;i++){if(i>=10&&i<=13)continue;hostileShot(g,e,i*Math.PI*2/24+e.age*.55,222);}for(const offset of [-.08,0,.08])hostileShot(g,e,fireAngle+offset,265);}
-          } else if (attack === 1) {
-            const count=phaseThree?13:phaseTwo?11:7,spread=phaseThree?.9:phaseTwo?.72:.48,speed=phaseThree?265:phaseTwo?235:195;
-            for(let i=0;i<count;i++)hostileShot(g,e,fireAngle-spread/2+spread*i/(count-1),speed);
-            if(phaseThree)for(const offset of [-.16,0,.16])hostileShot(g,e,fireAngle+offset,292);
-          } else {
-            const missileCount=phaseThree?5:phaseTwo?3:2;
-            for(let i=0;i<missileCount;i++)hostileMissile(g,e,fireAngle+(i-(missileCount-1)/2)*.12,'missile');
-            if(phaseTwo){for(let i=0;i<8;i++)hostileShot(g,e,i*Math.PI/4+e.age*.3,185);}
-            if(phaseThree){for(let i=0;i<14;i++){if(i===6||i===7)continue;hostileShot(g,e,i*Math.PI*2/14+e.age*.42,218);}}
+          const attackIndex=(Math.max(1,Math.floor(e.stage||g.stage))-1)%BOSS_ATTACKS.length,signature=BOSS_ATTACKS[attackIndex],tier=phaseThree?3:phaseTwo?2:1;
+          if(attackIndex===0){
+            const count=tier===3?24:tier===2?20:14,gap=tier===3?.35:tier===2?.23:.12,rotation=e.age*(tier===3?.55:.28);
+            for(let i=0;i<count;i++){const angle=rotation+i*Math.PI*2/count,diff=Math.atan2(Math.sin(angle-fireAngle),Math.cos(angle-fireAngle));if(Math.abs(diff)<gap)continue;hostileShot(g,e,angle,tier===3?222:tier===2?205:175,'gun',signature.color);}
+          }else if(attackIndex===1){
+            const count=tier===3?13:tier===2?11:7,spread=tier===3?.9:tier===2?.72:.48,speed=tier===3?265:tier===2?235:195;
+            for(let i=0;i<count;i++)hostileShot(g,e,fireAngle-spread/2+spread*i/(count-1),speed,'gun',signature.color);
+            if(tier===3)for(const offset of [-.16,0,.16])hostileShot(g,e,fireAngle+offset,292,'gun',signature.color);
+          }else if(attackIndex===2){
+            const missileCount=tier===3?5:tier===2?3:2;
+            for(let i=0;i<missileCount;i++)hostileMissile(g,e,fireAngle+(i-(missileCount-1)/2)*.12,'missile',signature.color);
+            if(tier>=2)for(let i=0;i<(tier===3?12:8);i++)hostileShot(g,e,i*Math.PI*2/(tier===3?12:8)+e.age*.3,190,'gun',signature.color);
+          }else if(attackIndex===3){
+            const count=tier===3?10:tier===2?8:6,spread=tier===3?.95:tier===2?.78:.62,speed=tier===3?132:tier===2?116:98;
+            for(let i=0;i<count;i++)hostileMine(g,e,fireAngle-spread/2+spread*i/(count-1),speed,signature.color);
+            if(tier>=2)for(const offset of [-.28,.28])hostileShot(g,e,fireAngle+offset,tier===3?240:205,'gun',signature.color);
+          }else if(attackIndex===4){
+            const count=tier===3?7:tier===2?5:3,spread=tier===3?.84:tier===2?.58:.34,speed=tier===3?490:tier===2?440:390;
+            for(let i=0;i<count;i++)hostileShot(g,e,fireAngle-spread/2+spread*i/(count-1),speed,'lance',signature.color);
+          }else{
+            const count=tier===3?22:tier===2?17:12,rotation=e.age*(tier===3?1.05:.7),golden=2.399963229728653;
+            for(let i=0;i<count;i++)hostileShot(g,e,rotation+i*golden,tier===3?228:tier===2?205:185,'gun',signature.color);
+            if(tier===3)for(const offset of [-.22,0,.22])hostileShot(g,e,fireAngle+offset,276,'lance',signature.color);
           }
+          g.events.push({type:'bossWeapon',attack:attackIndex,x:e.x,y:e.y,color:signature.color});
           e.fireIn = attackRecovery(g,phase===1?2.5:phase===2?1.7:1.2);
         } else if(e.kind==='interceptor') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=attackRecovery(g,2.8);}
         else if(e.kind==='sentry') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=attackRecovery(g,3.1);}
@@ -634,6 +668,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, enemyDesignForStage, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

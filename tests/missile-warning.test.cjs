@@ -31,3 +31,11 @@ test('ignores missiles outside the warning window and indicates diagonal threats
   const diagonal = gameWith({x:400,y:300,vx:200,vy:200,r:6,life:3,kind:'rocket'});
   assert.equal(core.incomingMissileThreat(diagonal).direction, '↖');
 });
+
+test('new gravity mines and rift lances use the same clear danger warning',()=>{
+  for(const [kind,vy] of [['mine',100],['lance',420]]){
+    const threat=core.incomingMissileThreat(gameWith({x:500,y:250,vx:0,vy,r:kind==='mine'?10:5,life:3,kind}));
+    assert.equal(threat.direction,'↑');
+    assert.equal(threat.kind,kind);
+  }
+});

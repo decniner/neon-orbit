@@ -32,8 +32,8 @@ function firstGuardianAttackRecovery(difficulty, healthRatio=1){
 
 test('Medium is the balanced baseline and every mode scales hull and attack tempo distinctly',()=>{
   assert.equal(core.ENEMY_TOUGHNESS,1.5,'regular enemies have 50% more base health');
-  assert.equal(core.BOSS_TOUGHNESS,4,'bosses have 300% more base health');
-  const choices=[['easy',5,126,.75,.50],['medium',6,168,1,.65],['hard',9,252,1.5,.90],['insane',14,378,2.25,1.25]];
+  assert.equal(core.BOSS_TOUGHNESS,6,'bosses have 500% more base health');
+  const choices=[['easy',5,172,.75,.50],['medium',6,252,1,.65],['hard',9,378,1.5,.90],['insane',14,567,2.25,1.25]];
   for(const [difficulty,enemyHp,bossHp,hullMultiplier,attackIntensity] of choices){
     assert.equal(spawnedEnemyHealth(difficulty),enemyHp,`${difficulty} regular enemy health`);
     assert.equal(spawnedBossHealth(difficulty),bossHp,`${difficulty} guardian health`);

@@ -85,6 +85,14 @@
         this.tone(180, .065, 'square', .035, t, 72); this.hiss(.055, .016, 2200, t);
       } else if (type === 'enemyMissile') {
         this.hiss(.24, .035, 500, t); this.tone(95, .2, 'sawtooth', .035, t, 42);
+      } else if (type === 'bossWeapon') {
+        const id=Number(weapon)||0;
+        if(id===0){this.tone(118,.32,'sawtooth',.045,t,42);this.hiss(.22,.026,1450,t);this.tone(880,.11,'triangle',.026,t+.12,330);}
+        else if(id===1){this.hiss(.24,.052,950,t);this.tone(390,.2,'sawtooth',.042,t,92);this.tone(1240,.12,'square',.018,t+.045,520);}
+        else if(id===2){this.tone(1020,.08,'square',.034,t);this.tone(760,.11,'square',.028,t+.12);this.tone(520,.2,'sawtooth',.038,t+.25,180);}
+        else if(id===3){this.tone(72,.36,'sine',.1,t,28);this.hiss(.32,.035,620,t);this.tone(1560,.08,'triangle',.022,t+.16,780);}
+        else if(id===4){this.tone(1550,.24,'sawtooth',.044,t,180);this.hiss(.1,.04,2800,t);this.tone(210,.28,'triangle',.045,t+.04,65);}
+        else{this.tone(96,.34,'sine',.085,t,32);this.tone(740,.28,'triangle',.038,t,1640);this.hiss(.2,.034,1050,t+.08);}
       } else if (type === 'missileWarning') {
         this.tone(1040, .095, 'square', .032, t); this.tone(780, .11, 'square', .026, t + .13);
       } else if (type === 'explosion') {
