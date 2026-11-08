@@ -119,6 +119,8 @@
       } else if (type === 'shield') {
         this.tone(760,.16,'sine',.045,t,1240);this.tone(1140,.24,'triangle',.026,t+.025,520);
         this.hiss(.11,.016,3300,t);
+      } else if (type === 'shieldBreak') {
+        this.hiss(.22,.052,1550,t);this.tone(118,.3,'sawtooth',.058,t,34);this.tone(960,.17,'triangle',.032,t+.012,280);this.tone(540,.22,'sine',.023,t+.04,146);
       } else if (type === 'pickup') {
         this.tone(640,.1,'triangle',.022,t,860);this.tone(960,.16,'sine',.025,t+.055,1280);
       }

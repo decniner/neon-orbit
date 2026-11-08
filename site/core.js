@@ -216,18 +216,36 @@
     const heavy = kind === 'heavy';
     const baseHp=({chaser:4,interceptor:6,sentry:8,heavy:14})[kind]+Math.floor((g.wave-1)/4);
     const hp=Math.ceil(baseHp*ENEMY_TOUGHNESS*difficultyFor(g).multiplier);
-    g.enemies.push({x, y, kind, heavy, stage:g.stage, destination:g.destination, age: 0, fireIn: .85, maxHp: hp,
+    const enemy={x, y, kind, heavy, stage:g.stage, destination:g.destination, age: 0, fireIn: .85, maxHp: hp,
       r: heavy ? 21 : kind === 'sentry' ? 17 : 14,
       hp,
-      speed: (heavy ? 45 : kind === 'interceptor' ? 125 : 65) + Math.min(g.wave, 25) * 3});
+      speed: (heavy ? 45 : kind === 'interceptor' ? 125 : 65) + Math.min(g.wave, 25) * 3};
+    initializeEnemyShield(g,enemy);g.enemies.push(enemy);
   }
   function spawnBoss(g) {
     g.bossCountdown = 0;
     const hp = Math.ceil((38 + g.stage * 4)*BOSS_TOUGHNESS*difficultyFor(g).bossMultiplier);
     const attack = bossAttackForStage(g.stage);
-    g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', name:attack.name, phase:1, stage:g.stage, destination:g.destination, speed: 35, fireIn: attackRecovery(g,2.8), age: 0});
+    const boss={x:g.player.x,y:g.player.y-420,r:44,hp,maxHp:hp,kind:'boss',name:attack.name,phase:1,stage:g.stage,destination:g.destination,speed:35,fireIn:attackRecovery(g,2.8),age:0};
+    initializeEnemyShield(g,boss);g.enemies.push(boss);
     g.bossSpawnedStage = g.stage;
     g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination, name:attack.name});
+  }
+  function initializeEnemyShield(g,e) {
+    const stage=Math.max(1,Math.floor(e.stage||g.stage||1));
+    const ratio=e.kind==='boss'?Math.min(.25,.14+Math.max(0,stage-4)*.012):Math.min(.58,.30+Math.max(0,stage-4)*.035);
+    e.maxShieldHp=stage<4?0:Math.ceil(e.maxHp*ratio);e.shieldHp=e.maxShieldHp;e.shieldFlash=0;return e;
+  }
+  function damageEnemy(g,e,amount,weaponKind,impactX=e.x,impactY=e.y) {
+    let hullDamage=Math.max(0,amount||1),absorbed=0;
+    if(e.shieldHp>0){absorbed=Math.min(e.shieldHp,hullDamage);e.shieldHp-=absorbed;hullDamage-=absorbed;e.shieldFlash=.18;
+      const color=enemyDesignForStage(e.stage||g.stage).hue;
+      if(e.shieldHp<=0){e.shieldHp=0;g.events.push({type:'shieldBreak',x:e.x,y:e.y,color,stage:e.stage||g.stage,absorbed});}
+      else g.events.push({type:'shieldHit',x:e.x,y:e.y,color,stage:e.stage||g.stage,absorbed,ratio:e.shieldHp/e.maxShieldHp});
+    }
+    if(hullDamage>0){e.hp-=hullDamage;e.hitFlash=.12;g.events.push({type:'impact',x:impactX,y:impactY,damage:hullDamage,weaponKind});}
+    if(e.hp<=0)defeat(g,e);
+    return {absorbed,hullDamage};
   }
   function supply(g) {
     let x = g.supplies === 0 ? g.player.x : clamp(g.player.x + (g.random() - .5) * WIDTH * .8, CORRIDOR.left, CORRIDOR.right);
@@ -373,9 +391,8 @@
     if(kind==='arc'){
       const chained=new Set();let from={x:g.player.x,y:g.player.y-10},next=target;
       for(let link=0;link<3&&next;link++){
-        chained.add(next);next.hp-=2+g.damageBonus;next.hitFlash=.14;
+        chained.add(next);damageEnemy(g,next,2+g.damageBonus,'arc');
         g.events.push({type:'arcHit',x:from.x,y:from.y,toX:next.x,toY:next.y,id:link,damage:2+g.damageBonus});
-        if(next.hp<=0)defeat(g,next);
         from=next;let closest=null,range=210;
         for(const enemy of g.enemies){if(enemy.hp<=0||chained.has(enemy))continue;const gap=distance(enemy,from);if(gap<range){range=gap;closest=enemy;}}
         next=closest;
@@ -426,7 +443,7 @@
     const radius=source==='player'?(b.kind==='nova'?(b.overdrive?132:88):54):b.blastRadius||(b.kind==='rocket'?72:48);
     for(const target of g.enemies){if(target.hp<=0)continue;const d=Math.hypot(target.x-x,target.y-y);if(d>radius)continue;
       const damage=Math.max(1,Math.ceil((b.damage||1)*(1-d/radius)));
-      target.hp-=damage;target.hitFlash=.12;g.events.push({type:'impact',x:target.x,y:target.y,damage});if(target.hp<=0)defeat(g,target);
+      damageEnemy(g,target,damage,b.kind,x,y);
     }
     g.events.push({type:'explosion',x,y,source,kind:b.kind,radius,color:b.color,overdrive:!!b.overdrive});
   }
@@ -446,12 +463,12 @@
         if(d>=v.radius||d<1)continue;
         const pull=(1-d/v.radius)*150*dt;
         e.x+=dx/d*pull;e.y+=dy/d*pull;
-        if(v.pulseIn<=0){e.hp-=v.damage;e.hitFlash=.12;g.events.push({type:'vortexPulse',x:e.x,y:e.y,damage:v.damage});if(e.hp<=0)defeat(g,e);}
+        if(v.pulseIn<=0){damageEnemy(g,e,v.damage,'vortex');g.events.push({type:'vortexPulse',x:e.x,y:e.y,damage:v.damage});}
       }
       if(v.pulseIn<=0)v.pulseIn=.18;
       if(v.life<=0){
         const radius=v.radius*.76;
-        for(const e of g.enemies){if(e.hp<=0)continue;const d=Math.hypot(v.x-e.x,v.y-e.y);if(d>radius)continue;const damage=Math.ceil(v.damage*2*(1-d/radius));e.hp-=damage;e.hitFlash=.16;if(e.hp<=0)defeat(g,e);}
+        for(const e of g.enemies){if(e.hp<=0)continue;const d=Math.hypot(v.x-e.x,v.y-e.y);if(d>radius)continue;const damage=Math.ceil(v.damage*2*(1-d/radius));damageEnemy(g,e,damage,'vortex');}
         g.events.push({type:'vortexCollapse',x:v.x,y:v.y,radius});g.vortices.splice(i,1);
       }
     }
@@ -463,7 +480,7 @@
   }
   function moveEnemy(g, e, dt) {
     const oldX=e.x,oldY=e.y;
-    e.age = (e.age || 0) + dt; e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
+    e.age = (e.age || 0) + dt; e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);e.shieldFlash=Math.max(0,(e.shieldFlash||0)-dt);
     const a = Math.atan2(g.player.y - e.y, g.player.x - e.x);
     const lure = activeDecoy(g) || g.player;
     const fireAngle = Math.atan2(lure.y - e.y, lure.x - e.x);
@@ -626,9 +643,8 @@
         (b.hitEnemies ||= new Set()).add(e);
         if(b.kind==='vortex'){openVortex(g,b);continue;}
         if((b.kind==='seeker'&&b.homing)||b.kind==='nova'){detonate(g,b,b.x,b.y,'player');continue;}
-        e.hp -= b.damage || 1; e.hitFlash = .1; g.events.push({type:'impact',x:b.x,y:b.y,damage:b.damage||1,weaponKind:b.kind}); b.pierce = (b.pierce || 1) - 1;
+        damageEnemy(g,e,b.damage||1,b.kind,b.x,b.y);b.pierce = (b.pierce || 1) - 1;
         if (b.pierce <= 0) b.life = 0;
-        if (e.hp <= 0) defeat(g, e);
       }
       for (const b of g.playerMissiles) {
         if (b.life <= 0 || e.hp <= 0 || distance(b, e) >= e.r + b.r) continue;
@@ -688,6 +704,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, enemyDesignForStage, bossAttackForStage, droneLaserPalette, enemyOrdnanceForStage, spawnIntervalForStage, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, enemyDesignForStage, bossAttackForStage, droneLaserPalette, enemyOrdnanceForStage, spawnIntervalForStage, initializeEnemyShield, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
