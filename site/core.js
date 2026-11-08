@@ -5,7 +5,7 @@
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
   const ENEMY_TOUGHNESS = 1.5;
-  const BOSS_TOUGHNESS = 6;
+  const BOSS_TOUGHNESS = 21;
   const WEAPONS = ['triple', 'vortex', 'eclipse', 'pulse', 'seeker', 'nova', 'arc'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
