@@ -4,6 +4,8 @@
   let WIDTH = 1000;
   const HEIGHT = 650;
   let CORRIDOR = {left:75, right:925};
+  const ENEMY_TOUGHNESS = 1.5;
+  const BOSS_TOUGHNESS = 4;
   const WEAPONS = ['triple', 'vortex', 'eclipse', 'pulse', 'seeker', 'nova', 'arc'];
   const DESTINATIONS = [
     {name:'LUNAR RELAY',boss:'AEGIS WARDEN',color:'#9af1d1'},
@@ -180,7 +182,7 @@
       : g.wave >= 2 && roll < .25 ? 'interceptor' : 'chaser';
     const heavy = kind === 'heavy';
     const baseHp=({chaser:4,interceptor:6,sentry:8,heavy:14})[kind]+Math.floor((g.wave-1)/4);
-    const hp=Math.ceil(baseHp*difficultyFor(g).multiplier);
+    const hp=Math.ceil(baseHp*ENEMY_TOUGHNESS*difficultyFor(g).multiplier);
     g.enemies.push({x, y, kind, heavy, age: 0, fireIn: .85, maxHp: hp,
       r: heavy ? 21 : kind === 'sentry' ? 17 : 14,
       hp,
@@ -188,7 +190,7 @@
   }
   function spawnBoss(g) {
     g.bossCountdown = 0;
-    const hp = Math.ceil((38 + g.stage * 4)*difficultyFor(g).multiplier);
+    const hp = Math.ceil((38 + g.stage * 4)*BOSS_TOUGHNESS*difficultyFor(g).multiplier);
     g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', phase:1, stage:g.stage, destination:g.destination, speed: 35, fireIn: attackRecovery(g,2.8), age: 0});
     g.bossSpawnedStage = g.stage;
     g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination});
@@ -632,6 +634,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -8,7 +8,7 @@ function fireGuardian(stage, healthRatio = 1, difficulty = 'medium', initialShot
   game.spawnIn = 100;
   game.stageTime = 0;
   game.fireIn = 100;
-  const maxHp = (38 + stage * 4) * (core.DIFFICULTIES.find(item => item.id === difficulty)?.multiplier || 1);
+  const maxHp = (38 + stage * 4) * core.BOSS_TOUGHNESS * (core.DIFFICULTIES.find(item => item.id === difficulty)?.multiplier || 1);
   const boss = {x:500,y:180,r:44,hp:maxHp*healthRatio,maxHp,kind:'boss',phase:1,stage,destination:core.destinationFor(stage),speed:0,fireIn:.01,age:2};
   game.enemies.push(boss);
   for (let i = 0; i < initialShots; i++) game.enemyBullets.push({x:80,y:70,vx:0,vy:0,r:2,life:5,kind:'gun'});
