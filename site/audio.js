@@ -60,7 +60,7 @@
       this.voices++; source.onended = () => { this.voices--; source.disconnect(); filter.disconnect(); gain.disconnect(); };
       source.start(t); source.stop(t + duration);
     }
-    effect(type, weapon = 'standard') {
+    effect(type, weapon = 'standard', stage = 1) {
       if (!this.enabled || !this.ready) return;
       const t = this.context.currentTime;
       if (type === 'fire') {
@@ -84,7 +84,7 @@
       } else if (type === 'enemyGun') {
         this.tone(180, .065, 'square', .035, t, 72); this.hiss(.055, .016, 2200, t);
       } else if (type === 'enemyMissile') {
-        this.hiss(.24, .035, 500, t); this.tone(95, .2, 'sawtooth', .035, t, 42);
+        const stageTone=(Math.max(1,Number(stage)||1)-1)%6;this.hiss(.24,.035,500+stageTone*170,t);this.tone(95+stageTone*13,.2,'sawtooth',.035,t,42+stageTone*7);
       } else if (type === 'bossWeapon') {
         const id=Number(weapon)||0;
         if(id===0){this.tone(118,.32,'sawtooth',.045,t,42);this.hiss(.22,.026,1450,t);this.tone(880,.11,'triangle',.026,t+.12,330);}
@@ -93,6 +93,7 @@
         else if(id===3){this.tone(72,.36,'sine',.1,t,28);this.hiss(.32,.035,620,t);this.tone(1560,.08,'triangle',.022,t+.16,780);}
         else if(id===4){this.tone(1550,.24,'sawtooth',.044,t,180);this.hiss(.1,.04,2800,t);this.tone(210,.28,'triangle',.045,t+.04,65);}
         else{this.tone(96,.34,'sine',.085,t,32);this.tone(740,.28,'triangle',.038,t,1640);this.hiss(.2,.034,1050,t+.08);}
+        const stageNote=(Math.max(1,Number(stage)||1)-1)%6;this.tone(58,.38,'sine',.058,t,25);this.tone(560+stageNote*73,.13,'triangle',.022,t+.07,220+stageNote*24);
       } else if (type === 'missileWarning') {
         this.tone(1040, .095, 'square', .032, t); this.tone(780, .11, 'square', .026, t + .13);
       } else if (type === 'explosion') {
@@ -106,7 +107,7 @@
       } else if (type === 'droneFire') {
         // Laser visuals carry the one-shot sound, avoiding a second attack click.
       } else if (type === 'droneLaser') {
-        const tier=Math.min(5,Number(weapon)||0);this.hiss(.055,.026+tier*.003,4200+tier*260,t);this.tone(1320+tier*95,.075,'sawtooth',.038+tier*.002,t,410+tier*35);this.tone(2480+tier*140,.05,'square',.014+tier*.001,t+.008,1120+tier*65);
+        const tier=Math.min(5,Number(weapon)||0),family=(Math.max(1,Number(stage)||1)-1)%6,base=[1180,1320,1040,1450,1560,1240][family],wave=['sawtooth','square','triangle','sawtooth','triangle','square'][family];this.hiss(.055,.026+tier*.003,4200+tier*260,t);this.tone(base+tier*95,.075,wave,.038+tier*.002,t,410+tier*35);this.tone(2480+tier*140,.05,'square',.014+tier*.001,t+.008,1120+tier*65);
       } else if (type === 'droneIntercept') {
         this.hiss(.09,.026,2600,t);this.tone(920,.075,'triangle',.025,t,420);this.tone(1540,.11,'sine',.018,t+.025,760);
       } else if (type === 'droneDock') {

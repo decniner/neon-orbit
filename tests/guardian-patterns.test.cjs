@@ -21,6 +21,14 @@ test('each guardian has a distinct, readable attack telegraph', () => {
   assert.deepEqual(core.BOSS_ATTACKS.map(attack => attack.id), ['lance-halo','cinder-fan','seeker-salvo','gravity-minefield','rift-lance-grid','null-spiral']);
 });
 
+test('each stage receives its own guardian color and later phases hit harder',()=>{
+  const colors=Array.from({length:12},(_,i)=>core.bossAttackForStage(i+1).color);
+  assert.equal(new Set(colors).size,12,'stage identity continues beyond the first six guardians');
+  const early=fireGuardian(3),final=fireGuardian(3,.3);
+  assert.ok(Math.max(...final.enemyBullets.filter(b=>b.boss).map(b=>b.damage))>Math.max(...early.enemyBullets.filter(b=>b.boss).map(b=>b.damage)));
+  assert.ok(final.enemies.find(e=>e.kind==='boss').fireIn<early.enemies.find(e=>e.kind==='boss').fireIn,'last phase volleys recover faster');
+});
+
 test('guardians escalate their signature attacks across all three phases', () => {
   const aegis = fireGuardian(1);
   const cinder = fireGuardian(2);

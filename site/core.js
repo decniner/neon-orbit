@@ -27,6 +27,20 @@
     const hue=generation?`hsl(${([350,18,275,53,164,330][fleet.form]+generation*23)%360} 88% 64%)`:fleet.hue;
     return {id:fleet.id, hue, form:fleet.form, stage:n, generation, severity:n};
   }
+  function droneLaserPalette(stage, droneId = 0, level = 0) {
+    const n=Math.max(1,Math.floor(Number(stage)||1)),generation=Math.floor((n-1)/6),family=(n-1)%6,side=Number(droneId)?1:0;
+    const hues=[5,34,284,112,190,326],hue=(hues[family]+generation*23+side*31)%360,accentHue=(hue+side*47+18)%360,brightness=62+Math.min(5,Math.max(0,level))*1.3;
+    return {stage:n,family,generation,beamColor:`hsl(${hue} 96% ${brightness}%)`,glowColor:`hsl(${hue} 100% 58%)`,accentColor:`hsl(${accentHue} 100% 72%)`,coreColor:'#fff7f4'};
+  }
+  function enemyOrdnanceForStage(stage) {
+    const n=Math.max(1,Math.floor(Number(stage)||1)),generation=Math.floor((n-1)/6),hue=(n*137.508+generation*17)%360,power=1+Math.min(n-1,18)*.035;
+    return {stage:n,rocket:{color:`hsl(${hue.toFixed(1)} 91% 62%)`,damage:1.1+Math.min(n-1,18)*.04,radius:72*power,speed:180*(1+Math.min(n-1,18)*.012),turnRate:1.7+Math.min(n-1,18)*.035},missile:{color:`hsl(${((hue+53)%360).toFixed(1)} 88% 68%)`,damage:.75+Math.min(n-1,18)*.035,radius:48*power,speed:210*(1+Math.min(n-1,18)*.012),turnRate:2.8+Math.min(n-1,18)*.04}};
+  }
+  function bossAttackForStage(stage) {
+    const n=Math.max(1,Math.floor(Number(stage)||1)),base=BOSS_ATTACKS[(n-1)%BOSS_ATTACKS.length];
+    return n<=BOSS_ATTACKS.length?base:{...base,color:`hsl(${((n*137.508+294)%360).toFixed(1)} 92% 66%)`,stage:n,generation:Math.floor((n-1)/BOSS_ATTACKS.length)};
+  }
+  function spawnIntervalForStage(stage) { return Math.max(.35,1.25-Math.max(1,Math.floor(Number(stage)||1))*.055); }
   const BOSS_ATTACKS = [
     {id:'lance-halo',name:'AEGIS WARDEN',telegraph:'WARD HALO / FIND THE GAP',color:'#9af1d1'},
     {id:'cinder-fan',name:'CINDER MATRIARCH',telegraph:'FURNACE FAN / BREAK ANGLE',color:'#ff874f'},
@@ -195,9 +209,10 @@
     const x = clamp(g.player.x + (g.random() - .5) * WIDTH, CORRIDOR.left, CORRIDOR.right);
     const y = g.player.y - HEIGHT * .57;
     const roll = g.random();
-    const kind = g.wave >= 3 && roll >= .43 && roll < .61 ? 'heavy'
-      : g.wave >= 3 && roll >= .25 && roll < .43 ? 'sentry'
-      : g.wave >= 2 && roll < .25 ? 'interceptor' : 'chaser';
+    const progress=clamp((g.stage-2)/10,0,1),interceptorShare=g.stage>=2?.25+.06*progress:0,sentryShare=g.stage>=3?.18+.07*progress:0,heavyShare=g.stage>=3?.18+.08*progress:0;
+    const kind = roll < interceptorShare ? 'interceptor'
+      : roll < interceptorShare+sentryShare ? 'sentry'
+      : roll < interceptorShare+sentryShare+heavyShare ? 'heavy' : 'chaser';
     const heavy = kind === 'heavy';
     const baseHp=({chaser:4,interceptor:6,sentry:8,heavy:14})[kind]+Math.floor((g.wave-1)/4);
     const hp=Math.ceil(baseHp*ENEMY_TOUGHNESS*difficultyFor(g).multiplier);
@@ -209,7 +224,7 @@
   function spawnBoss(g) {
     g.bossCountdown = 0;
     const hp = Math.ceil((38 + g.stage * 4)*BOSS_TOUGHNESS*difficultyFor(g).bossMultiplier);
-    const attack = BOSS_ATTACKS[(g.stage-1)%BOSS_ATTACKS.length];
+    const attack = bossAttackForStage(g.stage);
     g.enemies.push({x: g.player.x, y: g.player.y - 420, r: 44, hp, maxHp: hp, kind: 'boss', name:attack.name, phase:1, stage:g.stage, destination:g.destination, speed: 35, fireIn: attackRecovery(g,2.8), age: 0});
     g.bossSpawnedStage = g.stage;
     g.events.push({type: 'boss', wave: g.stage, stage:g.stage, destination:g.destination, name:attack.name});
@@ -322,7 +337,7 @@
         if(dist>285)flyDrone(d,projectile.x,projectile.y,620,dt);
         else{
           d.fireIn-=dt;
-          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;d.ammo=Math.max(0,d.ammo-1);g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.08*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;if(d.ammo===0)g.events.push({type:'droneAmmoEmpty',x:d.x,y:d.y,id:d.id});}
+          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;d.ammo=Math.max(0,d.ammo-1);g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo,stage:g.stage,...droneLaserPalette(g.stage,d.id,weaponLevel)});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.08*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;if(d.ammo===0)g.events.push({type:'droneAmmoEmpty',x:d.x,y:d.y,id:d.id});}
         }
         continue;
       }
@@ -332,7 +347,7 @@
       if(Math.hypot(target.x-d.x,target.y-d.y)<target.r+48)d.state='engage';
       if(Math.hypot(target.x-d.x,target.y-d.y)<520){
         d.fireIn-=dt;
-        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.ammo=Math.max(0,d.ammo-1);d.fireIn=.18*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});if(d.ammo===0){d.state='return';d.target=null;g.events.push({type:'droneAmmoEmpty',x:d.x,y:d.y,id:d.id});g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});}}
+        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.ammo=Math.max(0,d.ammo-1);d.fireIn=.18*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo,stage:g.stage,...droneLaserPalette(g.stage,d.id,weaponLevel)});if(d.ammo===0){d.state='return';d.target=null;g.events.push({type:'droneAmmoEmpty',x:d.x,y:d.y,id:d.id});g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});}}
       }
     }
   }
@@ -386,30 +401,34 @@
   }
   function hostileShot(g, e, angle, speed = 300, kind = 'gun', color) {
     if (g.enemyBullets.length >= 300) return;
+    const stage=e.stage||g.stage,stagePower=1+Math.min(stage-1,18)*.035,phasePower=e.kind==='boss'?(e.phase>=3?1.15:e.phase>=2?1.05:1):1;
+    const bossSpeed=e.kind==='boss'?1.04+Math.min(stage-1,12)*.007:1;
     g.enemyBullets.push({x: e.x + Math.cos(angle) * (e.r + 7), y: e.y + Math.sin(angle) * (e.r + 7),
-      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, r:5, life:kind==='lance'?4:5, kind, damage:kind==='lance'?2:1, color, boss: e.kind === 'boss'});
-    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle,boss:e.kind==='boss'});
+      vx: Math.cos(angle) * speed*bossSpeed, vy: Math.sin(angle) * speed*bossSpeed, angle, r:e.kind==='boss'?6:5, life:kind==='lance'?4:5, kind, damage:(kind==='lance'?2:1)*stagePower*phasePower, color, boss: e.kind === 'boss',stage});
+    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle,boss:e.kind==='boss',color,stage});
   }
   function hostileMine(g,e,angle,speed,color){
     if(g.enemyBullets.length>=300)return;
-    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+12),y:e.y+Math.sin(angle)*(e.r+12),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:10,life:7,kind:'mine',damage:1,color,boss:true});
+    const stage=e.stage||g.stage,power=(1+Math.min(stage-1,18)*.035)*(e.kind==='boss'?(e.phase>=3?1.15:e.phase>=2?1.05:1):1);
+    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+12),y:e.y+Math.sin(angle)*(e.r+12),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:10,life:7,kind:'mine',damage:power,color,boss:true,stage});
     g.events.push({type:'enemyFire',kind:'mine',x:e.x,y:e.y,angle,boss:true});
   }
   function hostileMissile(g,e,angle,kind='missile',color) {
     if (g.enemyBullets.length >= 300) return;
-    const speed=kind==='rocket'?180:210;
-    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+9),y:e.y+Math.sin(angle)*(e.r+9),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:kind==='rocket'?8:6,life:6,kind,turnRate:kind==='rocket'?1.7:2.8,damage:kind==='rocket'?2:1,trailIn:0,color,boss:e.kind==='boss'});
-    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle,boss:e.kind==='boss'});
+    const ordnance=enemyOrdnanceForStage(e.stage||g.stage),stage=ordnance.stage,spec=ordnance[kind==='rocket'?'rocket':'missile'],phase=e.kind==='boss'?e.phase||bossPhase(e):1,power=phase===3?1.2:phase===2?1.08:1;
+    const missileColor=color||spec.color,speed=spec.speed*(e.kind==='boss'?1.06+Math.min(stage-1,12)*.007:1),damage=spec.damage*power;
+    g.enemyBullets.push({x:e.x+Math.cos(angle)*(e.r+9),y:e.y+Math.sin(angle)*(e.r+9),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,angle,r:kind==='rocket'?8:6,life:6,kind,turnRate:spec.turnRate*(e.kind==='boss'?1.12:1),damage,blastRadius:spec.radius*(e.kind==='boss'?power:1),trailIn:0,color:missileColor,stage,boss:e.kind==='boss'});
+    g.events.push({type:'enemyFire',kind,x:e.x,y:e.y,angle,boss:e.kind==='boss',color:missileColor,stage});
   }
   function detonate(g,b,x,y,source) {
     if (b.exploded) return;
     b.exploded=true;b.life=0;
-    const radius=source==='player'?(b.kind==='nova'?(b.overdrive?132:88):54):b.kind==='rocket'?72:48;
+    const radius=source==='player'?(b.kind==='nova'?(b.overdrive?132:88):54):b.blastRadius||(b.kind==='rocket'?72:48);
     for(const target of g.enemies){if(target.hp<=0)continue;const d=Math.hypot(target.x-x,target.y-y);if(d>radius)continue;
       const damage=Math.max(1,Math.ceil((b.damage||1)*(1-d/radius)));
       target.hp-=damage;target.hitFlash=.12;g.events.push({type:'impact',x:target.x,y:target.y,damage});if(target.hp<=0)defeat(g,target);
     }
-    g.events.push({type:'explosion',x,y,source,kind:b.kind,radius,overdrive:!!b.overdrive});
+    g.events.push({type:'explosion',x,y,source,kind:b.kind,radius,color:b.color,overdrive:!!b.overdrive});
   }
   function openVortex(g,b) {
     b.life=0;
@@ -469,7 +488,7 @@
       if (e.fireIn <= 0) {
         if (e.kind === 'boss') {
           const phase = e.phase||bossPhase(e), phaseTwo = phase >= 2, phaseThree = phase >= 3;
-          const attackIndex=(Math.max(1,Math.floor(e.stage||g.stage))-1)%BOSS_ATTACKS.length,signature=BOSS_ATTACKS[attackIndex],tier=phaseThree?3:phaseTwo?2:1;
+          const attackIndex=(Math.max(1,Math.floor(e.stage||g.stage))-1)%BOSS_ATTACKS.length,signature=bossAttackForStage(e.stage||g.stage),tier=phaseThree?3:phaseTwo?2:1;
           if(attackIndex===0){
             const count=tier===3?24:tier===2?20:14,gap=tier===3?.35:tier===2?.23:.12,rotation=e.age*(tier===3?.55:.28);
             for(let i=0;i<count;i++){const angle=rotation+i*Math.PI*2/count,diff=Math.atan2(Math.sin(angle-fireAngle),Math.cos(angle-fireAngle));if(Math.abs(diff)<gap)continue;hostileShot(g,e,angle,tier===3?222:tier===2?205:175,'gun',signature.color);}
@@ -493,8 +512,8 @@
             for(let i=0;i<count;i++)hostileShot(g,e,rotation+i*golden,tier===3?228:tier===2?205:185,'gun',signature.color);
             if(tier===3)for(const offset of [-.22,0,.22])hostileShot(g,e,fireAngle+offset,276,'lance',signature.color);
           }
-          g.events.push({type:'bossWeapon',attack:attackIndex,x:e.x,y:e.y,color:signature.color});
-          e.fireIn = attackRecovery(g,phase===1?2.5:phase===2?1.7:1.2);
+          g.events.push({type:'bossWeapon',attack:attackIndex,x:e.x,y:e.y,color:signature.color,phase,stage:e.stage||g.stage});
+          e.fireIn = attackRecovery(g,phase===1?2.4:phase===2?1.6:1.12);
         } else if(e.kind==='interceptor') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=attackRecovery(g,2.8);}
         else if(e.kind==='sentry') {hostileMissile(g,e,fireAngle,'missile');e.fireIn=attackRecovery(g,3.1);}
         else if(e.kind==='heavy') {hostileMissile(g,e,fireAngle,'rocket');e.fireIn=attackRecovery(g,2.35);}
@@ -522,10 +541,10 @@
       g.events.push({type:'coreAcquired',id:coreId,level:g.guardianCores[coreId],x:e.x,y:e.y});
     } else if (g.kills % 8 === 0) g.pickups.push({x: e.x + 12, y: e.y, r: 14, life: 22, repair: true});
   }
-  function hit(g) {
+  function hit(g, damage = 1) {
     if(g.aegisShield){g.aegisShield=false;g.aegisRecharge=Math.max(9,24-(g.guardianCores.aegis-1)*3);g.invulnerable=1.5;g.events.push({type:'shieldHit',x:g.player.x,y:g.player.y,recharge:g.aegisRecharge});return;}
-    g.hp--; g.damageTaken++; g.invulnerable = 1.5;
-    g.events.push({type: 'hit', x: g.player.x, y: g.player.y});
+    g.hp=Math.max(0,g.hp-damage);g.damageTaken+=damage;g.invulnerable = 1.5;
+    g.events.push({type:'hit',x:g.player.x,y:g.player.y,damage});
     if (g.hp <= 0) { g.mode = 'over'; g.events.push({type: 'over',x:g.player.x,y:g.player.y}); }
   }
   function continueRun(g) {
@@ -581,7 +600,7 @@
     g.cameraY -= g.forwardSpeed * dt;
     g.cameraY = clamp(g.cameraY, g.player.y - 50, g.player.y + 360);
     g.spawnIn -= dt;
-    if (!bossActive && g.spawnIn <= 0) { spawn(g); g.spawnIn = Math.max(.35, 1.25 - g.wave * .055); }
+    if (!bossActive && g.spawnIn <= 0) { spawn(g); g.spawnIn = spawnIntervalForStage(g.stage); }
     g.fireIn -= dt; if (g.fireIn <= 0) fire(g);
     g.missileIn = Math.max(0, g.missileIn - dt);
     updateDrones(g,dt);
@@ -622,7 +641,7 @@
     if (g.mode === 'playing') for (const b of g.enemyBullets) {
       if(b.kind==='missile'||b.kind==='rocket'){
         const lure=activeDecoy(g)||g.player;guide(b,lure,dt);b.trailIn=(b.trailIn??0)-dt;
-        if(b.trailIn<=0){b.trailIn=.07;g.events.push({type:'missileTrail',x:b.x,y:b.y,vx:b.vx,vy:b.vy,source:'enemy'});}
+        if(b.trailIn<=0){b.trailIn=.07;g.events.push({type:'missileTrail',x:b.x,y:b.y,vx:b.vx,vy:b.vy,source:'enemy',color:b.color,stage:b.stage});}
       }
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       const lure=activeDecoy(g);
@@ -630,10 +649,10 @@
         if(b.kind==='missile'||b.kind==='rocket')detonate(g,b,b.x,b.y,'enemy');else b.life=0;
         hitDecoy(g,lure);continue;
       }
-      const range=b.kind==='rocket'?24:b.kind==='missile'?18:b.r+g.player.r;
+      const range=b.kind==='rocket'?Math.max(24,(b.blastRadius||72)*.35):b.kind==='missile'?Math.max(18,(b.blastRadius||48)*.32):b.r+g.player.r;
       if (b.life > 0 && distance(b, g.player) < range) {
         if(b.kind==='missile'||b.kind==='rocket')detonate(g,b,b.x,b.y,'enemy');else b.life=0;
-        if (!dashing && g.invulnerable <= 0 && distance(b,g.player)<b.r+g.player.r+5) hit(g);
+        if (!dashing && g.invulnerable <= 0 && distance(b,g.player)<b.r+g.player.r+5) hit(g,b.damage||1);
         if (g.mode === 'over') break;
       }
     }
@@ -669,6 +688,6 @@
     g.events = events;
     return simulated;
   }
-  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, enemyDesignForStage, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
+  const api = {get WIDTH() {return WIDTH;}, HEIGHT, get CORRIDOR() {return CORRIDOR;}, UPGRADES, DESTINATIONS, BOSS_ATTACKS, DIFFICULTIES, ENEMY_TOUGHNESS, BOSS_TOUGHNESS, VISUAL_SIZES, visualSizeScale, exhaustIntensity, DOCTRINES, destinationFor, enemyDesignForStage, bossAttackForStage, droneLaserPalette, enemyOrdnanceForStage, spawnIntervalForStage, configureViewport, createRenderGovernor, updateRenderGovernor, chooseUpgrade, createGame, start, continueRun, declineContinue, salvageForRun, togglePause, step, advance, dash, incomingMissileThreat};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.OrbitCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
