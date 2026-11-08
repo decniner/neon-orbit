@@ -101,6 +101,8 @@
         this.hiss(.18, .05, 1200, t); this.tone(140, .18, 'sine', .04, t, 520);
       } else if (type === 'droneLaunch') {
         this.hiss(.11,.018,1800,t);this.tone(720,.13,'triangle',.016,t,1120);
+      } else if (type === 'droneRearm') {
+        this.tone(310,.2,'triangle',.026,t,145);this.hiss(.12,.018,820,t+.035);
       } else if (type === 'droneFire') {
         // Laser visuals carry the one-shot sound, avoiding a second attack click.
       } else if (type === 'droneLaser') {

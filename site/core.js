@@ -120,7 +120,7 @@
       heading: -Math.PI / 2, roll: 0, rollTime: 0, rollDirection: 1, rollHeld: false,
       gunAngle: -Math.PI / 2, gunSide: 1, gunFlash: 0, dashDirection: {x: 0, y: -1},
       playerMissiles: [], missileIn: 0,
-      drones: [-1,1].map((side,index)=>({id:index,side,x:WIDTH/2+side*17,y:HEIGHT/2+6,vx:0,vy:0,state:'docked',charge:1,sortie:0,fireIn:.15,launchAt:1.05+index*1.3,orbitPhase:index*Math.PI}))
+      drones: [-1,1].map((side,index)=>({id:index,side,x:WIDTH/2+side*17,y:HEIGHT/2+6,vx:0,vy:0,state:'docked',charge:1,ammo:8,maxAmmo:8,sortie:0,fireIn:.15,launchAt:1.05+index*1.3,orbitPhase:index*Math.PI}))
     };
   }
   function destinationFor(stage) { return DESTINATIONS[(Math.max(1, Math.floor(stage)) - 1) % DESTINATIONS.length]; }
@@ -292,16 +292,17 @@
   function updateDrones(g,dt) {
     const weaponLevel=Math.min(5,(g.droneWeaponLevel||0)+(g.weaponTime>0?1:0));
     for(const d of g.drones){
+      if(!Number.isFinite(d.maxAmmo))d.maxAmmo=8;if(!Number.isFinite(d.ammo))d.ammo=d.maxAmmo;
       if(d.state==='docked'){
         const phase=g.time*1.65+d.orbitPhase,orbitX=g.player.x+Math.cos(phase)*44,orbitY=g.player.y+Math.sin(phase)*27;
         flyDrone(d,orbitX,orbitY,220,dt);
         const target=dronePriorityTarget(g,d);
-        if(g.time>=d.launchAt&&droneNeedsDeploy(g,target)){d.target=target;d.state='outbound';d.sortie=0;d.retargetIn=.7;d.fireIn=.12;g.events.push({type:'droneLaunch',x:d.x,y:d.y,id:d.id});}
+        if(g.time>=d.launchAt&&droneNeedsDeploy(g,target)){d.target=target;d.state='outbound';d.sortie=0;d.retargetIn=.7;d.fireIn=.12;g.events.push({type:'droneLaunch',x:d.x,y:d.y,id:d.id,ammo:d.ammo,maxAmmo:d.maxAmmo});}
         continue;
       }
       if(d.state==='recharge'){
         d.x=g.player.x+d.side*17;d.y=g.player.y+7;d.vx=g.player.vx;d.vy=g.player.vy;d.charge=Math.min(1,d.charge+dt/1.65);
-        if(d.charge>=1){d.state='docked';d.target=null;d.launchAt=g.time+.55;g.events.push({type:'droneReady',x:d.x,y:d.y,id:d.id});}
+        if(d.charge>=1){d.state='docked';d.ammo=d.maxAmmo;d.target=null;d.launchAt=g.time+.55;g.events.push({type:'droneReady',x:d.x,y:d.y,id:d.id,ammo:d.ammo,maxAmmo:d.maxAmmo});}
         continue;
       }
       if(d.state==='return'){
@@ -321,7 +322,7 @@
         if(dist>285)flyDrone(d,projectile.x,projectile.y,620,dt);
         else{
           d.fireIn-=dt;
-          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.08*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;}
+          if(d.fireIn<=0){projectile.life=0;projectile.hp=0;d.ammo=Math.max(0,d.ammo-1);g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:projectile.x,toY:projectile.y,id:d.id,defensive:true,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});g.events.push({type:'droneIntercept',x:projectile.x,y:projectile.y,id:d.id,kind:projectile.kind});d.fireIn=.08*Math.max(.65,1-weaponLevel*.06);d.state='return';d.target=null;if(d.ammo===0)g.events.push({type:'droneAmmoEmpty',x:d.x,y:d.y,id:d.id});}
         }
         continue;
       }
@@ -331,7 +332,7 @@
       if(Math.hypot(target.x-d.x,target.y-d.y)<target.r+48)d.state='engage';
       if(Math.hypot(target.x-d.x,target.y-d.y)<520){
         d.fireIn-=dt;
-        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.fireIn=.18*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel});}
+        if(d.fireIn<=0){const speed=690+weaponLevel*18,lead=clamp(distance(d,target)/speed,0,.5),aimX=target.x+(target.vx||0)*lead,aimY=target.y+(target.vy||0)*lead,angle=Math.atan2(aimY-d.y,aimX-d.x),damage=1+Math.floor((weaponLevel+1)/2);g.bullets.push({x:d.x,y:d.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,r:3.2+weaponLevel*.22,life:1.1,kind:'drone',damage,droneLevel:weaponLevel,pierce:1,hitEnemies:new Set()});d.ammo=Math.max(0,d.ammo-1);d.fireIn=.18*Math.max(.52,1-weaponLevel*.08);g.events.push({type:'droneFire',x:d.x,y:d.y,angle,id:d.id,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});g.events.push({type:'droneLaser',x:d.x,y:d.y,toX:aimX,toY:aimY,id:d.id,level:weaponLevel,ammo:d.ammo,maxAmmo:d.maxAmmo});if(d.ammo===0){d.state='return';d.target=null;g.events.push({type:'droneAmmoEmpty',x:d.x,y:d.y,id:d.id});g.events.push({type:'droneReturn',x:d.x,y:d.y,id:d.id});}}
       }
     }
   }
